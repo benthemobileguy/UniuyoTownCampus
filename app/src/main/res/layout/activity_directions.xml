@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:mapbox="http://schemas.android.com/apk/res-auto"
+    tools:context=".DirectionsActivity">
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:background="@android:color/darker_gray"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true">
+        <Button
+            android:id="@+id/back_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="16dp"
+            android:layout_gravity="top|start"
+            android:background="@drawable/ic_keyboard_arrow_left_black_24dp" />
+        <TextView
+            android:id="@+id/toolbar_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:fontFamily="@font/muli_bold"
+            android:ellipsize="end"
+            android:text="Directions"
+            android:textColor="@android:color/white"
+            android:textSize="16sp" />
+    </androidx.appcompat.widget.Toolbar>
+    <com.mapbox.mapboxsdk.maps.MapView
+        android:layout_below="@+id/toolbar"
+        android:id="@+id/mapView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        mapbox:mapbox_cameraTargetLat="5.0409083"
+        mapbox:mapbox_cameraTargetLng="7.9235053"
+        mapbox:mapbox_cameraZoom="15"/>
+</RelativeLayout>

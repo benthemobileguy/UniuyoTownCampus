@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".NotificationsActivity">
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:background="@color/customRed"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true">
+        <!-- MapView -->
+        <Button
+            android:id="@+id/back_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="16dp"
+            android:layout_gravity="top|start"
+            android:background="@drawable/ic_keyboard_arrow_left_black_24dp" />
+        <TextView
+            android:id="@+id/toolbar_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:fontFamily="@font/muli_bold"
+            android:ellipsize="end"
+            android:text="Notifications"
+            android:textColor="@android:color/white"
+            android:textSize="16sp" />
+    </androidx.appcompat.widget.Toolbar>
+<TextView
+    android:id="@+id/not_text"
+    android:text="You have no notifications yet"
+    android:textSize="16sp"
+    android:textColor="@android:color/tertiary_text_dark"
+    android:layout_centerInParent="true"
+    android:fontFamily="@font/muli_bold"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"/>
+    <Button
+        android:id="@+id/not_button"
+        android:layout_marginTop="20dp"
+        android:padding="16dp"
+        android:layout_below="@+id/not_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+       android:layout_centerInParent="true"
+        android:background="@android:color/white"
+        android:textAllCaps="false"
+        android:fontFamily="@font/muli_bold"
+        android:text="Set Notifications"
+        android:textColor="@drawable/text_selector"
+        android:textSize="16sp" />
+</RelativeLayout>

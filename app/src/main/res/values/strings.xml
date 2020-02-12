@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">UniuyoTownCampus</string>
     <string name="version_number">v1.0.0</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoiYmVuMjAxOSIsImEiOiJjazI0YmF6MGoxNGhqM2ducjhscGpleXV1In0.czhhj_e8WSpRNqI2IlGd5w</string>
+    <string name="directions_activity_toast_message">ssS</string>
 </resources>

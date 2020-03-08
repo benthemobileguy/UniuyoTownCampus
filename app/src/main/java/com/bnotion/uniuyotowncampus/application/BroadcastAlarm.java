@@ -41,8 +41,8 @@ public class BroadcastAlarm extends BroadcastReceiver {
         NotificationCompat.Builder notification= new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
         notification.setContentIntent(pendingIntent)
                 .setSmallIcon(R.drawable.ic_bell)
-                .setContentTitle("ListenIn Reminder")
-                .setContentText("Tap to access scheduled audio book")
+                .setContentTitle("Unioyo Town Campus")
+                .setContentText("Tap to access scheduled location")
                 .setSound(alarm)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setTicker("listenIn")

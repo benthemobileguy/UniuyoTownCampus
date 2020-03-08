@@ -2,13 +2,11 @@ package com.bnotion.uniuyotowncampus.model;
 
 public class Property {
     private String name;
-    private double latitude;
-    private double longitude;
+    private  String coordinates;
 
-    public Property(String name, double latitude, double longitude) {
+    public Property(String name, String coordinates) {
         this.name = name;
-        this.latitude = latitude;
-        this.longitude = longitude;
+        this.coordinates = coordinates;
     }
 
     public String getName() {
@@ -19,19 +17,11 @@ public class Property {
         this.name = name;
     }
 
-    public double getLatitude() {
-        return latitude;
+    public String getCoordinates() {
+        return coordinates;
     }
 
-    public void setLatitude(double latitude) {
-        this.latitude = latitude;
-    }
-
-    public double getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(double longitude) {
-        this.longitude = longitude;
+    public void setCoordinates(String coordinates) {
+        this.coordinates = coordinates;
     }
 }

@@ -88,10 +88,6 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconOffset;
-import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineCap;
-import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineGradient;
-import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineJoin;
-import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineWidth;
 
 public class DirectionsActivity extends AppCompatActivity implements OnMapReadyCallback,
         MapboxMap.OnMapClickListener, PermissionsListener { ;
@@ -103,7 +99,6 @@ public class DirectionsActivity extends AppCompatActivity implements OnMapReadyC
     public ArrayList<Double> longitude;
     public ArrayList<Double> latitude;
     private MapView mMapView;
-    private ArrayList<String> arrayList;
     private ArrayList<String> arrayList2;
     private String buildingName;
     private MarkerView markerView;
@@ -136,7 +131,6 @@ public class DirectionsActivity extends AppCompatActivity implements OnMapReadyC
         setContentView(R.layout.activity_directions);
         // Mapbox access token is configured here. This needs to be called either in your application
 // object or in the same activity which contains the mapview.
-        arrayList = new ArrayList<>();
         arrayList2 = new ArrayList<>();
         longitude = new ArrayList<>();
         latitude = new ArrayList<>();
@@ -280,6 +274,7 @@ public class DirectionsActivity extends AppCompatActivity implements OnMapReadyC
                         if (feature.properties() != null) {
                             for (Map.Entry<String, JsonElement> entry : feature.properties().entrySet()) {
 // Log all the properties
+
                                 if (entry.getKey().equals("name")) {
                                     if (!arrayList2.contains(entry.getValue().toString())) {
                                         arrayList2.add(entry.getValue().toString().replace("\"", ""));
@@ -482,7 +477,7 @@ public class DirectionsActivity extends AppCompatActivity implements OnMapReadyC
 
         try {
 // Add GeoJsonSource to map
-            loadedMapStyle.addSource(new GeoJsonSource(geoJsonSourceId, new URI("https://gist.githubusercontent.com/benthemobileguy/c5ee9e6e5a5db7e70aeeba4137816073/raw/7df879385a193d1c91cdc63fe341a9ab8a37a7c6/my%2520map"))
+            loadedMapStyle.addSource(new GeoJsonSource(geoJsonSourceId, new URI("https://gist.githubusercontent.com/benthemobileguy/9899ee8cd354c7bdb346b17cb79bf966/raw/0772e5e254357c69ab2cce578d1aee5604f85c21/gistfile1.txt"))
             );
             loadedMapStyle.addSource(new GeoJsonSource(Constants.ICON_SOURCE_ID, getOriginAndDestinationFeatureCollection()));
         } catch (Throwable throwable) {

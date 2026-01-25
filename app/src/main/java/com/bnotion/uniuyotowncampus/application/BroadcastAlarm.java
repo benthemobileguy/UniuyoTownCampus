@@ -37,7 +37,7 @@ public class BroadcastAlarm extends BroadcastReceiver {
         Uri alarm = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         Intent intent1 = new Intent(context, SearchActivity.class);
         intent1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 100, intent1, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 100, intent1, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder notification= new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
         notification.setContentIntent(pendingIntent)
                 .setSmallIcon(R.drawable.ic_bell)

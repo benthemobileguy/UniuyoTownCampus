@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Uniuyo Town Campus</string>
+    <!-- mapbox_access_token is injected from local.properties via build.gradle -->
+</resources>

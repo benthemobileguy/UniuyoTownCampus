@@ -1,0 +1,12 @@
+# Copy this file to local.properties and fill in your values
+# local.properties is gitignored and should never be committed
+
+sdk.dir=/path/to/your/Android/sdk
+flutter.sdk=/path/to/your/flutter
+flutter.buildMode=release
+flutter.versionName=2.0.0
+flutter.versionCode=2
+
+# Mapbox Access Token - Get yours from https://account.mapbox.com/access-tokens/
+# This is a PUBLIC token (starts with pk.) and is safe to use in client applications
+MAPBOX_ACCESS_TOKEN=your_mapbox_public_token_here

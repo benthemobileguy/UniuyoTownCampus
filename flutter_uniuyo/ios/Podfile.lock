@@ -1,0 +1,57 @@
+PODS:
+  - Flutter (1.0.0)
+  - flutter_local_notifications (0.0.1):
+    - Flutter
+  - mapbox_maps_flutter (2.23.0):
+    - Flutter
+    - MapboxMaps (= 11.23.0)
+    - Turf (= 4.0.0)
+  - MapboxCommon (24.23.0):
+    - Turf (= 4.0.0)
+  - MapboxCoreMaps (11.23.0):
+    - MapboxCommon (= 24.23.0)
+  - MapboxMaps (11.23.0):
+    - MapboxCommon (= 24.23.0)
+    - MapboxCoreMaps (= 11.23.0)
+    - Turf (= 4.0.0)
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - Turf (4.0.0)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
+  - mapbox_maps_flutter (from `.symlinks/plugins/mapbox_maps_flutter/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+
+SPEC REPOS:
+  trunk:
+    - MapboxCommon
+    - MapboxCoreMaps
+    - MapboxMaps
+    - Turf
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  flutter_local_notifications:
+    :path: ".symlinks/plugins/flutter_local_notifications/ios"
+  mapbox_maps_flutter:
+    :path: ".symlinks/plugins/mapbox_maps_flutter/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_local_notifications: 395056b3175ba4f08480a7c5de30cd36d69827e4
+  mapbox_maps_flutter: e621533614172933bc7c2dc42ad67aa201094b5a
+  MapboxCommon: 718cadedc92a08d5e2858c4926cfef7cacdfd329
+  MapboxCoreMaps: 3eab31f7dc4ae7fda28377e299af186f87ad0612
+  MapboxMaps: f1f11ac17b46b797c6f021879eac13cc6d2cbaa4
+  path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
+  Turf: c9eb11a65d96af58cac523460fd40fec5061b081
+
+PODFILE CHECKSUM: e30f02f9d1c72c47bb6344a0a748c9d268180865
+
+COCOAPODS: 1.16.2

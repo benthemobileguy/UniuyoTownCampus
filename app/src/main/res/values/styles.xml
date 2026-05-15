@@ -10,16 +10,4 @@
     <style name="TimePickerTheme" parent="Theme.AppCompat.Light.Dialog">
         <item name="colorAccent">@color/customRed</item>
     </style>
-
-    <!-- Navigation Map Route Style -->
-    <style name="NavigationMapRoute">
-        <item name="routeColor">#2096F3</item>
-        <item name="routeShieldColor">#1976D2</item>
-        <item name="routeScale">1.0</item>
-        <item name="alternativeRouteColor">#808080</item>
-        <item name="alternativeRouteShieldColor">#666666</item>
-        <item name="alternativeRouteScale">1.0</item>
-        <item name="upcomingManeuverArrowColor">#FFFFFF</item>
-        <item name="upcomingManeuverArrowBorderColor">#2096F3</item>
-    </style>
 </resources>

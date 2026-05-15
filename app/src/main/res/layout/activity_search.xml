@@ -71,14 +71,11 @@
             android:layout_height="wrap_content" />
     </LinearLayout>
 
-    <com.mapbox.mapboxsdk.maps.MapView
+    <com.mapbox.maps.MapView
         android:layout_below="@+id/linear1"
         android:id="@+id/mapView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        mapbox:mapbox_cameraTargetLat="5.0409083"
-        mapbox:mapbox_cameraTargetLng="7.9235053"
-        mapbox:mapbox_cameraZoom="16"/>
+        android:layout_height="match_parent" />
 
 
 </RelativeLayout>

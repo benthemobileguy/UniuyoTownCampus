@@ -1,0 +1,78 @@
+name: uniuyo_town_campus
+description: University of Uyo Town Campus Navigation App
+publish_to: 'none'
+
+# From build.gradle: versionCode 2, versionName "2.0"
+version: 2.0.0+2
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management - Riverpod 2.0+
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation - AutoRoute
+  auto_route: ^9.2.2
+
+  # Mapbox Maps SDK for Flutter
+  mapbox_maps_flutter: ^2.3.0
+
+  # Data Classes - Freezed
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+
+  # UI - Google Fonts (for Muli font from Android)
+  google_fonts: ^6.2.1
+
+  # Notifications (from BroadcastAlarm.kt)
+  flutter_local_notifications: ^18.0.1
+
+  # Utilities
+  intl: ^0.19.0
+
+  # HTTP client for Mapbox Directions API
+  http: ^1.2.0
+
+  # Local storage for recent searches and favorites
+  shared_preferences: ^2.3.3
+
+  # URL launcher for email, phone, web links
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code Generation
+  build_runner: ^2.4.13
+  riverpod_generator: ^2.6.2
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  auto_route_generator: ^9.0.0
+
+  # Linting
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Assets from Android project drawable folder
+  assets:
+    # Images (from app/src/main/res/drawable/)
+    - assets/images/directions.png
+    - assets/images/search.png
+    - assets/images/notifications.png
+    - assets/images/study.png
+    - assets/images/feedback.png
+    - assets/images/info.png
+    - assets/images/header.jpeg
+    - assets/images/logo_image.jpeg
+
+    # GeoJSON files (local data instead of remote URL)
+    - assets/geojson/Buildings111.geojson
+    - assets/geojson/Roads111.geojson

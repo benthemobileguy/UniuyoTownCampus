@@ -10,8 +10,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/coordinate_transformer.dart';
+import '../../../../core/widgets/blinking_buildings_overlay.dart';
 import '../../../directions/data/providers/campus_data_providers.dart';
 import '../../../directions/domain/entities/building.dart';
+import '../../../directions/presentation/pages/directions_page.dart';
+import '../../../reminders/presentation/widgets/reminder_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Search page matching SearchActivity.kt
 class SearchPage extends ConsumerStatefulWidget {
@@ -75,6 +79,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             onMapCreated: _onMapCreated,
             onTapListener: _onMapTapped,
           ),
+
+          // Blinking buildings overlay for reminders
+          if (_mapReady && _mapboxMap != null)
+            BlinkingBuildingsOverlay(mapboxMap: _mapboxMap!),
 
           // Search Bar Overlay
           Positioned(
@@ -167,116 +175,160 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               right: 20,
               // Position bubble just below the building (pointer is 14px tall)
               top: _bubblePosition!.dy + 14, // Exactly at pointer tip height
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _InfoBoxWithPointerPainter(
-                    pointerX: _bubblePosition!.dx - 20, // Adjust for container left margin
+              child: Stack(
+                children: [
+                  // Background bubble (no interactive children to avoid semantics issues)
+                  CustomPaint(
+                    painter: _InfoBoxWithPointerPainter(
+                      pointerX: _bubblePosition!.dx - 20, // Adjust for container left margin
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(16, 26, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _selectedBuilding!.displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(1, 1),
+                                  blurRadius: 3,
+                                  color: Colors.black45,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Units, Edge, Point',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Builder(
+                            builder: (context) {
+                              final centroid = _selectedBuilding!.centroid;
+                              final wgs84 = CoordinateTransformer.utmToWgs84(
+                                easting: centroid.x,
+                                northing: centroid.y,
+                              );
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'easting = ${centroid.x.toStringAsFixed(2)}, northing = ${centroid.y.toStringAsFixed(2)}, altitude = 0.0',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: 'monospace',
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'latitude = ${wgs84.latitude.toStringAsFixed(7)}, longitude = ${wgs84.longitude.toStringAsFixed(7)}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: 'monospace',
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 80), // Space for action icons
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 26, 16, 16), // Top padding for pointer
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+
+                  // Interactive action icons (separate from CustomPaint to avoid semantics issues)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 16,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        // Building name with function (display name)
-                        Text(
-                          _selectedBuilding!.displayName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900, // Extra bold
-                            letterSpacing: 0.5,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(1, 1),
-                                blurRadius: 3,
-                                color: Colors.black45,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        // Coordinate details
-                        Text(
-                          'Units, Edge, Point',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700, // Bold
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Builder(
-                          builder: (context) {
-                            final centroid = _selectedBuilding!.centroid;
+                        _buildBubbleActionIcon(
+                          Icons.directions,
+                          'Directions',
+                          () {
+                            final building = _selectedBuilding!;
+                            final centroid = building.centroid;
                             final wgs84 = CoordinateTransformer.utmToWgs84(
                               easting: centroid.x,
                               northing: centroid.y,
                             );
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'easting = ${centroid.x.toStringAsFixed(2)}, northing = ${centroid.y.toStringAsFixed(2)}, altitude = 0.0',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600, // Semi-bold
-                                    fontFamily: 'monospace',
-                                    height: 1.5,
-                                  ),
+
+                            // Navigate to DirectionsPage with building as destination
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DirectionsPage(
+                                  destinationName: building.displayName,
+                                  destinationLat: wgs84.latitude,
+                                  destinationLng: wgs84.longitude,
                                 ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'latitude = ${wgs84.latitude.toStringAsFixed(7)}, longitude = ${wgs84.longitude.toStringAsFixed(7)}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600, // Semi-bold
-                                    fontFamily: 'monospace',
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
+                              ),
                             );
+                          },
+                        ),
+                        _buildBubbleActionIcon(
+                          Icons.share,
+                          'Share',
+                          () {
+                            _shareBuilding(_selectedBuilding!);
+                          },
+                        ),
+                        _buildBubbleActionIcon(
+                          Icons.notifications_outlined,
+                          'Reminder',
+                          () {
+                            final buildingId = _selectedBuilding!.name;
+                            final displayName = _selectedBuilding!.displayName;
+
+                            // Show dialog first, then hide bubble when dialog closes
+                            showDialog(
+                              context: context,
+                              builder: (context) => ReminderDialog(
+                                buildingId: buildingId,
+                                buildingDisplayName: displayName,
+                              ),
+                            ).then((_) {
+                              // Hide bubble after dialog closes
+                              if (mounted) {
+                                setState(() {
+                                  _selectedBuilding = null;
+                                  _bubblePosition = null;
+                                });
+                              }
+                            });
+                          },
+                        ),
+                        _buildBubbleActionIcon(
+                          Icons.comment_outlined,
+                          'Comment',
+                          () {
+                            _showCommentDialog(_selectedBuilding!);
                           },
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
-            ),
-
-          // Action icons at bottom (like Android)
-          if (_selectedBuilding != null)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: MediaQuery.of(context).padding.bottom + 100,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildActionIcon(Icons.location_on, () {
-                    debugPrint('Get directions to: ${_selectedBuilding!.displayName}');
-                  }),
-                  const SizedBox(width: 24),
-                  _buildActionIcon(Icons.share, () {
-                    debugPrint('Share: ${_selectedBuilding!.displayName}');
-                  }),
-                  const SizedBox(width: 24),
-                  _buildActionIcon(Icons.notifications, () {
-                    final buildingName = _selectedBuilding!.displayName;
-                    setState(() {
-                      _selectedBuilding = null;
-                      _bubblePosition = null;
-                    });
-                    _showReminderPicker(buildingName);
-                  }),
-                  const SizedBox(width: 24),
-                  _buildActionIcon(Icons.comment, () {
-                    debugPrint('Comment on: ${_selectedBuilding!.displayName}');
-                  }),
                 ],
               ),
             ),
@@ -981,40 +1033,166 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
 
-  Widget _buildActionIcon(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: const BoxDecoration(
-          color: Colors.black,
-          shape: BoxShape.circle,
+  /// Share building location
+  Future<void> _shareBuilding(Building building) async {
+    final centroid = building.centroid;
+    final wgs84 = CoordinateTransformer.utmToWgs84(
+      easting: centroid.x,
+      northing: centroid.y,
+    );
+
+    // Create Google Maps link for sharing
+    final mapsUrl = 'https://www.google.com/maps?q=${wgs84.latitude},${wgs84.longitude}';
+    final message = '${building.displayName}\n'
+        'Location: ${wgs84.latitude.toStringAsFixed(6)}, ${wgs84.longitude.toStringAsFixed(6)}\n'
+        'View on map: $mapsUrl';
+
+    // Copy to clipboard and show confirmation
+    await Clipboard.setData(ClipboardData(text: message));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Location copied to clipboard'),
+          backgroundColor: AppColors.success,
+          action: SnackBarAction(
+            label: 'OPEN MAP',
+            textColor: AppColors.white,
+            onPressed: () async {
+              final uri = Uri.parse(mapsUrl);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+          ),
         ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: 24,
+      );
+    }
+  }
+
+  /// Show comment dialog for building
+  void _showCommentDialog(Building building) {
+    final TextEditingController commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.comment, color: AppColors.primary, size: 24),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Add Comment')),
+          ],
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      building.displayName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: commentController,
+              decoration: InputDecoration(
+                labelText: 'Your comment',
+                hintText: 'Share your thoughts about this location...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                ),
+              ),
+              maxLines: 4,
+              maxLength: 200,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final comment = commentController.text.trim();
+              if (comment.isNotEmpty) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Comment saved for ${building.displayName}'),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+                // TODO: Integrate with backend to save comment
+                debugPrint('Comment for ${building.name}: $comment');
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('SUBMIT'),
+          ),
+        ],
       ),
     );
   }
 
-  void _showReminderPicker(String buildingName) {
-    showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    ).then((time) {
-      if (time != null) {
-        // TODO: Schedule notification using flutter_local_notifications
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Reminder set for $buildingName at ${time.format(context)}'),
+  /// Build action icon for bubble (matches Android layout)
+  Widget _buildBubbleActionIcon(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: Colors.white,
+            ),
           ),
-        );
-      }
-    });
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 9,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
   }
+
 }
 
 /// Custom painter for info box with pointer tab (speech bubble style)

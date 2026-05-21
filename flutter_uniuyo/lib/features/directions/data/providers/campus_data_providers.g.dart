@@ -6,7 +6,7 @@ part of 'campus_data_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$geoJsonDataSourceHash() => r'0637b1630e20562923bfcaf1c44957187401e6a2';
+String _$geoJsonDataSourceHash() => r'47c644191489c34a777e0ba01504b8aa861225d7';
 
 /// Provider for GeoJSON data source
 ///
@@ -27,7 +27,7 @@ final geoJsonDataSourceProvider =
 // ignore: unused_element
 typedef GeoJsonDataSourceRef = AutoDisposeProviderRef<GeoJsonLocalDataSource>;
 String _$campusDataRepositoryHash() =>
-    r'9e9eb23a81616f1c6c25846ef620260b1cc58015';
+    r'40f38eb035c6791698ee1cbe8ec8426bcd09f874';
 
 /// Provider for campus data repository
 ///
@@ -47,7 +47,7 @@ final campusDataRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef CampusDataRepositoryRef = AutoDisposeProviderRef<CampusDataRepository>;
-String _$buildingsHash() => r'be2c22ed2bddbfab11c5e6a00fc4189eb716aec6';
+String _$buildingsHash() => r'a015cf73334a3415db27e952517c49717686e221';
 
 /// Provider for all buildings
 ///
@@ -65,7 +65,7 @@ final buildingsProvider = AutoDisposeFutureProvider<List<Building>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef BuildingsRef = AutoDisposeFutureProviderRef<List<Building>>;
-String _$roadsHash() => r'53afe9a555315deba9a43ffbcf1a52a537ffeb2f';
+String _$roadsHash() => r'7f747a64c9dfedb22a224643a345405b1f78ddc1';
 
 /// Provider for all roads
 ///
@@ -83,7 +83,7 @@ final roadsProvider = AutoDisposeFutureProvider<List<Road>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef RoadsRef = AutoDisposeFutureProviderRef<List<Road>>;
-String _$searchBuildingsHash() => r'c24ece936eff985a054aac77cd23552853946feb';
+String _$searchBuildingsHash() => r'62f688f678cc2e8bb8ab6aad4553f46b28b9a7f9';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -248,7 +248,7 @@ class _SearchBuildingsProviderElement
   String get query => (origin as SearchBuildingsProvider).query;
 }
 
-String _$buildingNamesHash() => r'b254259d2b1f9e436bd9691a291edb8a5f8d4385';
+String _$buildingNamesHash() => r'a66edaf6f7db180b72716ad80f4ba195bcb4d4d2';
 
 /// Provider for building names (for autocomplete)
 ///

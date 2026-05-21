@@ -7,13 +7,13 @@ class AppColors {
   // ============================================
   // PRIMARY PALETTE (University Brand Colors)
   // ============================================
-  // Deep blue - professional, trustworthy, academic
-  static const Color primary = Color(0xFF1565C0); // Deep blue
-  static const Color primaryLight = Color(0xFF1976D2);
-  static const Color primaryDark = Color(0xFF0D47A1);
-  static const Color primaryContainer = Color(0xFFBBDEFB);
+  // Coral red - matches university logo
+  static const Color primary = Color(0xFFFF6B6B); // Coral red (from logo)
+  static const Color primaryLight = Color(0xFFFF8A8A);
+  static const Color primaryDark = Color(0xFFE55555);
+  static const Color primaryContainer = Color(0xFFFFE0E0);
   static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color onPrimaryContainer = Color(0xFF001D36);
+  static const Color onPrimaryContainer = Color(0xFF4D0000);
 
   // ============================================
   // SECONDARY PALETTE (Academic Green)
@@ -50,9 +50,9 @@ class AppColors {
   static const Color errorLight = Color(0xFFE53935);
   static const Color errorContainer = Color(0xFFFFCDD2);
 
-  static const Color info = Color(0xFF1976D2);
-  static const Color infoLight = Color(0xFF2196F3);
-  static const Color infoContainer = Color(0xFFBBDEFB);
+  static const Color info = Color(0xFFFF6B6B);
+  static const Color infoLight = Color(0xFFFF8A8A);
+  static const Color infoContainer = Color(0xFFFFE0E0);
 
   // ============================================
   // SURFACE & BACKGROUND

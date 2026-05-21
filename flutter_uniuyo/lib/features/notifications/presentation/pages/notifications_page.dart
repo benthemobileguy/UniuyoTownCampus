@@ -158,12 +158,6 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createReminder,
-        backgroundColor: AppColors.customGreen,
-        icon: const Icon(Icons.add_alarm),
-        label: const Text('Set Reminder'),
-      ),
     );
   }
 
@@ -367,41 +361,6 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 fontSize: 12,
                 color: Colors.grey[600],
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('CLOSE'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _createReminder() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.add_alarm, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Set Reminder'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Create reminders for classes, events, or important locations on campus.',
-              style: TextStyle(fontSize: 14),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'This feature will be fully integrated in a future update.',
-              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
             ),
           ],
         ),

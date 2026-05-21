@@ -31,9 +31,11 @@ dependencies:
 
   # Notifications (from BroadcastAlarm.kt)
   flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.0  # For notification scheduling with proper timezone handling
 
   # Utilities
   intl: ^0.19.0
+  uuid: ^4.0.0  # For unique reminder IDs
 
   # HTTP client for Mapbox Directions API
   http: ^1.2.0

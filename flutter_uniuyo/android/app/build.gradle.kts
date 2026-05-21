@@ -6,10 +6,13 @@ plugins {
 }
 
 // Load Mapbox token from local.properties
-val localProperties = java.util.Properties()
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
-    localProperties.load(java.io.FileInputStream(localPropertiesFile))
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 val mapboxAccessToken = localProperties.getProperty("MAPBOX_ACCESS_TOKEN") ?: ""
 

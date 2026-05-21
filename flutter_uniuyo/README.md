@@ -5,10 +5,14 @@ Flutter version of the University of Uyo Town Campus navigation app, migrated fr
 ## Project Overview
 
 This Flutter application provides campus navigation features including:
-- **Building Search**: Find buildings on campus with autocomplete search
-- **Directions**: Get walking directions between buildings
-- **Map Visualization**: Interactive map showing buildings and roads
-- **Reminders**: Set location-based reminders (coming soon)
+- **Building Search**: Find buildings on campus with autocomplete search and recent searches
+- **Directions**: Get walking directions between buildings using Mapbox Directions API
+- **Map Visualization**: Interactive 3D map with color-coded buildings and roads
+- **Building Reminders**: Schedule notifications for building visits with date/time pickers
+- **Building Actions**: Share locations, add comments, and get directions from building info bubble
+- **Study Spaces**: Find academic buildings and quiet study locations
+- **Campus Information**: View campus details and facilities
+- **Feedback**: Submit feedback about the app
 
 ## Architecture
 
@@ -18,28 +22,46 @@ This Flutter application provides campus navigation features including:
 lib/
 ├── core/
 │   ├── theme/
-│   │   ├── app_colors.dart        # Exact colors from Android colors.xml
-│   │   ├── app_dimensions.dart    # Exact dimensions from Android layouts
-│   │   └── app_theme.dart         # Material theme configuration
-│   └── utils/
-│       └── coordinate_transformer.dart  # UTM to WGS84 conversion
+│   │   ├── app_colors.dart        # Coral red theme (#FF6B6B)
+│   │   ├── app_dimensions.dart    # Layout dimensions
+│   │   ├── app_theme.dart         # Material theme configuration
+│   │   └── app_spacing.dart       # Spacing constants
+│   ├── utils/
+│   │   └── coordinate_transformer.dart  # UTM to WGS84 conversion
+│   ├── services/
+│   │   ├── reminder_service.dart        # SharedPreferences for reminders
+│   │   ├── notification_service.dart    # flutter_local_notifications
+│   │   └── mapbox_directions_service.dart # Directions API
+│   ├── providers/
+│   │   └── recent_searches_provider.dart # Recent searches state
+│   └── widgets/
+│       └── blinking_buildings_overlay.dart # Gold pulsing animation
 ├── features/
-│   ├── splash/                    # Splash screen (8 second timeout)
+│   ├── splash/                    # Splash screen (8s timeout)
 │   ├── home/                      # Main menu with 6 feature cards
-│   ├── search/                    # Building search with map
-│   └── directions/                # Turn-by-turn navigation
-│       ├── domain/
-│       │   ├── entities/
-│       │   │   ├── building.dart  # Building data model
-│       │   │   └── road.dart      # Road data model
-│       │   └── repositories/
-│       ├── data/
-│       │   ├── datasources/
-│       │   │   └── geojson_local_datasource.dart
-│       │   ├── repositories/
-│       │   └── providers/         # Riverpod providers
-│       └── presentation/
-└── main.dart
+│   ├── search/                    # Building search with speech bubble
+│   ├── directions/                # Turn-by-turn navigation
+│   │   ├── domain/
+│   │   │   └── entities/
+│   │   │       ├── building.dart  # Building data model
+│   │   │       └── road.dart      # Road data model
+│   │   ├── data/
+│   │   │   └── providers/         # Riverpod providers
+│   │   └── presentation/
+│   ├── reminders/                 # Building reminder system
+│   │   ├── domain/
+│   │   │   └── entities/
+│   │   │       └── reminder.dart  # Reminder entity (Freezed)
+│   │   ├── data/
+│   │   │   └── providers/         # Reminder state management
+│   │   └── presentation/
+│   │       └── widgets/
+│   │           └── reminder_dialog.dart # Date/time picker dialog
+│   ├── notifications/             # Announcements page
+│   ├── study_space/               # Study spaces page
+│   ├── feedback/                  # User feedback page
+│   └── campus_info/               # Campus information page
+└── main.dart                      # App entry point with notification init
 ```
 
 ## Data Sources
@@ -67,11 +89,12 @@ The GeoJSON files use **UTM Zone 32N (EPSG:32632)** projection. The app includes
 All values were extracted from the original Android project (no assumptions):
 
 ### Colors (`app_colors.dart`)
-- `customRed: #CD5C5C` - Primary accent color
-- `colorPrimary: #404040` - App bar and primary UI
-- `colorPrimaryDark: #1C1C1C` - Status bar
-- `customTextColor: #1C1C1C` - Text color
-- `customGreen: #008000` - Success/navigation color
+- `primary: #FF6B6B` - Coral red (matches university logo) - App bars, buttons, accents
+- `primaryLight: #FF8A8A` - Lighter coral shade
+- `primaryDark: #E55555` - Darker coral shade
+- `secondary: #2E7D32` - Academic green for success/navigation
+- `textPrimary: #1A1C1E` - Primary text color
+- Building colors: Red (#D32F2F) for academic, Orange (#EF6C00) for admin, Purple (#512DA8) for library
 
 ### Dimensions (`app_dimensions.dart`)
 - Grid padding: 14dp
@@ -104,7 +127,13 @@ dependencies:
   freezed_annotation: ^2.4.1        # Immutable data classes
   json_annotation: ^4.9.0           # JSON serialization
   google_fonts: ^6.2.1              # Muli font
-  flutter_local_notifications: ^18.0.1  # Reminders/notifications
+  flutter_local_notifications: ^18.0.1  # Local notifications for reminders
+  timezone: ^0.9.0                  # Timezone support for notifications
+  uuid: ^4.0.0                      # Unique IDs for reminders
+  shared_preferences: ^2.3.3        # Local storage for reminders and searches
+  url_launcher: ^6.3.1              # Launch URLs and share locations
+  http: ^1.2.0                      # Mapbox Directions API calls
+  intl: ^0.19.0                     # Date/time formatting
 ```
 
 ## Setup Instructions
@@ -146,11 +175,46 @@ Run code generation for Riverpod providers and Freezed models:
 flutter pub run build_runner build --delete-conflicting-outputs
 ```
 
-### 4. Run the App
+### 4. Configure Mapbox Token
+
+Create `android/local.properties` file with your Mapbox access token:
+
+```properties
+MAPBOX_ACCESS_TOKEN=your_token_here
+```
+
+### 5. Run the App
 
 ```bash
 flutter run
 ```
+
+## Building APK
+
+### Development Build
+
+```bash
+flutter build apk --debug
+```
+
+### Release Build
+
+```bash
+# Clean and rebuild
+flutter clean
+flutter pub get
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# Build release APK
+flutter build apk --release
+```
+
+The APK will be located at:
+```
+build/app/outputs/flutter-apk/app-release.apk
+```
+
+**Note**: The release build is signed with debug keys. For production, configure proper signing in `android/app/build.gradle.kts`.
 
 ## Implementation Status
 
@@ -158,56 +222,86 @@ flutter run
 
 1. **Core Architecture**
    - Clean Architecture structure
-   - Riverpod state management setup
-   - Theme configuration with exact Android values
+   - Riverpod 2.0+ state management with code generation
+   - Coral red theme (#FF6B6B) matching university logo
    - Coordinate transformation utility (UTM to WGS84)
 
 2. **Data Layer**
    - Building and Road entity models (Freezed)
+   - Reminder entity model (Freezed) with JSON serialization
    - GeoJSON local data source
    - Repository pattern implementation
-   - Riverpod providers for buildings and roads
+   - ReminderService (SharedPreferences persistence)
+   - NotificationService (flutter_local_notifications)
+   - RecentSearchesService (SharedPreferences)
+   - Riverpod providers for buildings, roads, and reminders
 
 3. **UI Pages**
    - ✅ Splash Page (8 second timeout with fade animation)
    - ✅ Home Page (2:8 flex ratio, 6 feature cards)
-   - ✅ Search Page (building search with map visualization)
-   - ✅ Directions Page (from/to autocomplete, map visualization)
+   - ✅ Search Page (building search with map visualization and speech bubble)
+   - ✅ Directions Page (from/to autocomplete, turn-by-turn directions, route visualization)
+   - ✅ Notifications Page (campus announcements with settings)
+   - ✅ Study Space Page (academic buildings list)
+   - ✅ Feedback Page (user feedback form)
+   - ✅ Campus Info Page (campus information and facilities)
 
 4. **Mapbox Integration**
-   - Map initialization with correct API
-   - GeoJSON source loading from assets
-   - Fill layer for buildings (red with 0.7 opacity)
+   - Map initialization with Mapbox v11 API
+   - GeoJSON source loading from local assets
+   - Multiple fill layers for buildings (color-coded by function)
    - Line layer for roads
-   - Building selection on tap
-   - Camera animations (flyTo)
+   - Building selection with tap detection
+   - Speech bubble with building info (coordinates, display names)
+   - Camera animations (flyTo with easing)
+   - 3D building toggle
+   - Zoom controls
+
+5. **Reminder System**
+   - ReminderDialog with date/time pickers
+   - Building reminder scheduling with exact alarms
+   - Local notification system with channel configuration
+   - Blinking/pulsing buildings with active reminders (gold animation)
+   - Reminder CRUD operations (Create, Read, Update, Delete)
+   - Auto-cleanup of old reminders (30 days)
+   - Notification tap handling (deep linking to building)
+   - UNDO functionality for reminder creation
+
+6. **Building Actions (Speech Bubble)**
+   - Directions: Navigate to DirectionsPage with building as destination
+   - Share: Copy location to clipboard with Google Maps link
+   - Reminder: Open reminder dialog to schedule notification
+   - Comment: Add comments about building (ready for backend integration)
+
+7. **Navigation Features**
+   - Route calculation using Mapbox Directions API
+   - Turn-by-turn navigation display
+   - Route line rendering on map with polyline
+   - Route summary cards (distance, duration)
+   - Alternative routes support
+   - Accessible routes toggle
+
+8. **Permissions**
+   - Notification permissions (Android 13+)
+   - Exact alarm scheduling permissions
+   - Post notifications permission
 
 ### 🚧 Pending
 
-1. **Navigation Features**
-   - Route calculation using Mapbox Directions API
-   - Turn-by-turn navigation display
-   - Route line rendering on map
-
-2. **Notifications**
-   - Location-based reminders
-   - Time-based reminders
-   - Notification scheduling with flutter_local_notifications
-
-3. **Additional Pages**
-   - Notifications Page
-   - Study Space Page
-   - Feedback Page
-   - Campus Info Page
-
-4. **Testing**
+1. **Testing**
    - Unit tests for repositories
    - Widget tests for pages
    - Integration tests
 
-5. **Permissions**
-   - Location permission handling
-   - Notification permission handling
+2. **Backend Integration**
+   - Comment system API
+   - User authentication (optional)
+   - Cloud storage for reminders (optional)
+
+3. **Enhancements**
+   - Location-based reminder triggers (geofencing)
+   - Recurring reminders
+   - Offline mode improvements
 
 ## Key Differences from Android
 
@@ -267,23 +361,45 @@ await mapboxMap.style.addLayer(
 );
 ```
 
-## Next Steps
+## Version Information
 
-1. **Install dependencies and generate code**:
-   ```bash
-   flutter pub get
-   flutter pub run build_runner build --delete-conflicting-outputs
-   ```
+- **App Version**: 2.0.0 (Build 2)
+- **Package**: com.bnotion.uniuyotowncampus.uniuyo_town_campus
+- **Min SDK**: Android 5.0 (API 21)
+- **Target SDK**: Android 14 (API 34)
+- **Flutter Version**: 3.35.7+
+- **Mapbox SDK**: v2.3.0
 
-2. **Copy image assets** from Android project
+## Key Features
 
-3. **Test the app** on a device or emulator
+### Speech Bubble with Building Actions
+When you tap a building on the map, a coral-red speech bubble appears with:
+- Building display name (e.g., "B11 - Library")
+- UTM and WGS84 coordinates
+- 4 action icons:
+  - **Directions**: Open directions to the building
+  - **Share**: Copy location with Google Maps link
+  - **Reminder**: Schedule a notification
+  - **Comment**: Add comments about the building
 
-4. **Implement navigation** using Mapbox Directions API
+### Building Reminder System
+- Date and time picker for scheduling
+- Optional message field (100 characters)
+- Past date validation
+- Local notification with vibration and LED
+- Buildings with active reminders blink gold on map (1.5s pulse animation)
+- Notification tap opens app and navigates to building
+- UNDO functionality after creating reminder
+- Auto-cleanup of reminders older than 30 days
 
-5. **Add notification support** for reminders
-
-6. **Complete remaining pages** (Notifications, Study Space, Feedback, Campus Info)
+### Directions System
+- Autocomplete search for origin and destination
+- Real-time route calculation with Mapbox Directions API
+- Turn-by-turn navigation display
+- Route summary with distance and duration
+- Alternative routes support
+- Accessible routes toggle
+- Route visualization on map
 
 ## Sources
 

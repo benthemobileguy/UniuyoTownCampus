@@ -61,7 +61,7 @@ Future<List<Building>> searchBuildings(
 Future<List<String>> buildingNames(BuildingNamesRef ref) async {
   debugPrint('📝 Provider: Loading building names for autocomplete...');
   final buildings = await ref.watch(buildingsProvider.future);
-  final names = buildings.map((b) => b.name).toList()..sort();
-  debugPrint('✅ Provider: Loaded ${names.length} building names');
+  final names = buildings.map((b) => b.displayName).toList()..sort();
+  debugPrint('✅ Provider: Loaded ${names.length} building display names');
   return names;
 }

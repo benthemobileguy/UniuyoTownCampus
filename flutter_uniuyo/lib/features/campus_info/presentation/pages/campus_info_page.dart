@@ -197,84 +197,26 @@ class _CampusInfoPageState extends ConsumerState<CampusInfoPage> {
                                   ),
                                 ),
                               ),
-                              DataColumn(
-                                label: Text(
-                                  'Area (m²)',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                numeric: true,
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'Action',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
                             ],
                             rows: filteredBuildings.map((building) {
                               return DataRow(
+                                onSelectChanged: (_) => _navigateToBuilding(building),
                                 cells: [
                                   DataCell(
-                                    Container(
-                                      constraints: const BoxConstraints(maxWidth: 200),
-                                      child: Text(
-                                        building.name,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
-                                      ),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Container(
-                                      constraints: const BoxConstraints(maxWidth: 150),
-                                      child: Text(
-                                        building.buildingFunction,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[700],
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
+                                    Text(
+                                      building.name,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ),
                                   DataCell(
                                     Text(
-                                      building.areaM2.toStringAsFixed(0),
+                                      building.buildingFunction,
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 13,
                                         color: Colors.grey[700],
-                                      ),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    ElevatedButton.icon(
-                                      onPressed: () => _navigateToBuilding(building),
-                                      icon: const Icon(Icons.location_on, size: 16),
-                                      label: const Text(
-                                        'View',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.customGreen,
-                                        foregroundColor: AppColors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
                                       ),
                                     ),
                                   ),
@@ -339,11 +281,11 @@ class _CampusInfoPageState extends ConsumerState<CampusInfoPage> {
   }
 
   void _navigateToBuilding(Building building) {
-    // Navigate to SearchPage and pass the building name
+    // Navigate to SearchPage and pass the display name (e.g., "B11 - Library")
     // The SearchPage will handle showing this building on the map
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => SearchPage(initialBuildingName: building.name),
+        builder: (context) => SearchPage(initialBuildingName: building.displayName),
       ),
     );
   }

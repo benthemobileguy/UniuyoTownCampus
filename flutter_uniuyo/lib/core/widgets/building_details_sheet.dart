@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../features/directions/domain/entities/building.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../utils/coordinate_transformer.dart';
 
 /// Professional Material 3 bottom sheet for building details
 /// Inspired by UOB and modern campus apps
@@ -127,31 +128,7 @@ class BuildingDetailsSheet extends StatelessWidget {
             // Building information
             Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildInfoRow(
-                    context,
-                    icon: Icons.tag,
-                    label: 'Building ID',
-                    value: '#${building.gid}',
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _buildInfoRow(
-                    context,
-                    icon: Icons.square_foot,
-                    label: 'Area',
-                    value: '${building.areaM2.toStringAsFixed(0)} m²',
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _buildInfoRow(
-                    context,
-                    icon: Icons.business,
-                    label: 'Function',
-                    value: building.buildingFunction,
-                  ),
-                ],
-              ),
+              child: _buildBuildingInfo(context, building),
             ),
 
             // Action buttons
@@ -228,6 +205,118 @@ class BuildingDetailsSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBuildingInfo(BuildContext context, Building building) {
+    // Get UTM coordinates (easting, northing)
+    final centroid = building.centroid;
+    final eastingUtm = centroid.x;
+    final northingUtm = centroid.y;
+
+    // Convert to WGS84 (latitude, longitude)
+    final wgs84 = CoordinateTransformer.utmToWgs84(
+      easting: eastingUtm,
+      northing: northingUtm,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInfoRow(
+          context,
+          icon: Icons.tag,
+          label: 'Building ID',
+          value: '#${building.gid}',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _buildInfoRow(
+          context,
+          icon: Icons.square_foot,
+          label: 'Area',
+          value: '${building.areaM2.toStringAsFixed(0)} m²',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _buildInfoRow(
+          context,
+          icon: Icons.business,
+          label: 'Function',
+          value: building.buildingFunction,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Coordinate details section (like Android app)
+        Text(
+          'Coordinates',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // WGS84 (Latitude, Longitude)
+        _buildCoordRow(
+          context,
+          label: 'Latitude',
+          value: '${wgs84.latitude.toStringAsFixed(7)}°',
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _buildCoordRow(
+          context,
+          label: 'Longitude',
+          value: '${wgs84.longitude.toStringAsFixed(7)}°',
+        ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // UTM (Easting, Northing)
+        _buildCoordRow(
+          context,
+          label: 'Easting (UTM)',
+          value: '${eastingUtm.toStringAsFixed(2)} m',
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _buildCoordRow(
+          context,
+          label: 'Northing (UTM)',
+          value: '${northingUtm.toStringAsFixed(2)} m',
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _buildCoordRow(
+          context,
+          label: 'Altitude',
+          value: '0.0 m', // GeoJSON doesn't have altitude data
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCoordRow(
+    BuildContext context, {
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                fontFamily: 'monospace',
+                fontSize: 12,
+              ),
+          textAlign: TextAlign.end,
+        ),
+      ],
     );
   }
 

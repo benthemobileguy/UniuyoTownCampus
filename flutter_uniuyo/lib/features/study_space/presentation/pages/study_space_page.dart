@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/coordinate_transformer.dart';
+import '../../../../core/widgets/building_details_sheet.dart';
 import '../../../directions/data/providers/campus_data_providers.dart';
 import '../../../directions/domain/entities/building.dart';
 
@@ -618,7 +619,7 @@ class _StudySpacePageState extends ConsumerState<StudySpacePage> {
     }
   }
 
-  void _onMapCreated(MapboxMap mapboxMap) {
+  void _onMapCreated(MapboxMap mapboxMap) async {
     _mapboxMap = mapboxMap;
 
     // Set initial camera position
@@ -631,6 +632,11 @@ class _StudySpacePageState extends ConsumerState<StudySpacePage> {
 
     // Enable live location tracking (blue puck)
     _enableLocationTracking();
+
+    debugPrint('🗺️ StudySpacePage: Map created, waiting for style to load...');
+
+    // Wait a bit for style to load before adding layers
+    await Future.delayed(const Duration(milliseconds: 500));
 
     // Load map style and add GeoJSON layers
     _setupMap();
@@ -894,48 +900,35 @@ class _StudySpacePageState extends ConsumerState<StudySpacePage> {
     }
   }
 
-  void _showBuildingDialog(String buildingName, String buildingFunction) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.school, color: AppColors.customGreen),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                buildingName,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Function:',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              buildingFunction,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('CLOSE'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _showBuildingDialog(String buildingName, String buildingFunction) async {
+    try {
+      final buildings = await ref.read(buildingsProvider.future);
+      final building = buildings.firstWhere(
+        (b) => b.name == buildingName,
+        orElse: () => buildings.first,
+      );
+
+      if (mounted) {
+        BuildingDetailsSheet.show(
+          context,
+          building: building,
+          onGetDirections: () {
+            // TODO: Navigate to DirectionsPage with this building as destination
+            debugPrint('📍 Get directions to: ${building.name}');
+          },
+          onSetReminder: () {
+            // TODO: Set reminder for study session
+            debugPrint('⏰ Set reminder for: ${building.name}');
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ StudySpacePage: Error showing building info - $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load building details')),
+        );
+      }
+    }
   }
 }

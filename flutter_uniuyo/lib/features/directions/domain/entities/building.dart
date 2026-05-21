@@ -71,4 +71,10 @@ extension BuildingExtension on Building {
         ? (x: sumX / count, y: sumY / count)
         : (x: 0.0, y: 0.0);
   }
+
+  /// Get a user-friendly display name combining code and function
+  /// Example: "B11 - Library" or "A1 - Laboratory"
+  String get displayName {
+    return '$name - $buildingFunction';
+  }
 }

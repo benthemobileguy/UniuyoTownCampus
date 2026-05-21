@@ -933,7 +933,7 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
     );
   }
 
-  void _onMapCreated(MapboxMap mapboxMap) {
+  void _onMapCreated(MapboxMap mapboxMap) async {
     _mapboxMap = mapboxMap;
 
     // Set initial camera position
@@ -946,6 +946,11 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
 
     // Enable live location tracking (blue puck)
     _enableLocationTracking();
+
+    debugPrint('🗺️ DirectionsPage: Map created, waiting for style to load...');
+
+    // Wait a bit for style to load before adding layers
+    await Future.delayed(const Duration(milliseconds: 500));
 
     // Load map style and add GeoJSON layers
     _setupMap();
@@ -1195,9 +1200,16 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
 
   void _onMapTapped(MapContentGestureContext context) async {
     debugPrint('👆 DirectionsPage: Map tapped at position ${context.touchPosition}');
+    // Query for buildings at tap location - check all building fill layers
     final features = await _mapboxMap?.queryRenderedFeatures(
       RenderedQueryGeometry.fromScreenCoordinate(context.touchPosition),
-      RenderedQueryOptions(layerIds: ["buildings-fill-layer"]),
+      RenderedQueryOptions(layerIds: [
+        "buildings-default-layer",
+        "buildings-academic-layer",
+        "buildings-admin-layer",
+        "buildings-library-layer",
+        "buildings-medical-layer",
+      ]),
     );
 
     debugPrint('🔍 DirectionsPage: Found ${features?.length ?? 0} features at tap location');

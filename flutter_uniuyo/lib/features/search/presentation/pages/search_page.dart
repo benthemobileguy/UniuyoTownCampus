@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,11 +26,16 @@ class SearchPage extends ConsumerStatefulWidget {
 class _SearchPageState extends ConsumerState<SearchPage> {
   MapboxMap? _mapboxMap;
   final TextEditingController _searchController = TextEditingController();
+  TextEditingController? _autocompleteController; // Controller for Autocomplete widget
   List<Building> _searchResults = [];
   bool _mapReady = false;
   bool _hasHandledInitialBuilding = false;
   bool _is3DMode = false; // 3D buildings toggle
   bool _showPOIs = false; // POI layer toggle
+
+  // Selected building info to show on map
+  Building? _selectedBuilding;
+  Offset? _bubblePosition; // Screen position for bubble's pointer/tail
 
   // From DirectionsActivity.kt line 216, 67-68
   static const double _defaultLat = 5.0409083;
@@ -99,6 +105,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     _onBuildingSelected(selection);
                   },
                   fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                    // Capture the controller so we can update it when building is tapped
+                    _autocompleteController = controller;
+
                     return TextField(
                       controller: controller,
                       focusNode: focusNode,
@@ -150,6 +159,127 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               ),
             ),
           ),
+
+          // Building info box with pointer tab (like Android speech bubble)
+          if (_selectedBuilding != null && _bubblePosition != null)
+            Positioned(
+              left: 20,
+              right: 20,
+              // Position bubble just below the building (pointer is 14px tall)
+              top: _bubblePosition!.dy + 14, // Exactly at pointer tip height
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _InfoBoxWithPointerPainter(
+                    pointerX: _bubblePosition!.dx - 20, // Adjust for container left margin
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16, 26, 16, 16), // Top padding for pointer
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Building name with function (display name)
+                        Text(
+                          _selectedBuilding!.displayName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900, // Extra bold
+                            letterSpacing: 0.5,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(1, 1),
+                                blurRadius: 3,
+                                color: Colors.black45,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // Coordinate details
+                        Text(
+                          'Units, Edge, Point',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700, // Bold
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Builder(
+                          builder: (context) {
+                            final centroid = _selectedBuilding!.centroid;
+                            final wgs84 = CoordinateTransformer.utmToWgs84(
+                              easting: centroid.x,
+                              northing: centroid.y,
+                            );
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'easting = ${centroid.x.toStringAsFixed(2)}, northing = ${centroid.y.toStringAsFixed(2)}, altitude = 0.0',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600, // Semi-bold
+                                    fontFamily: 'monospace',
+                                    height: 1.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'latitude = ${wgs84.latitude.toStringAsFixed(7)}, longitude = ${wgs84.longitude.toStringAsFixed(7)}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600, // Semi-bold
+                                    fontFamily: 'monospace',
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Action icons at bottom (like Android)
+          if (_selectedBuilding != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.of(context).padding.bottom + 100,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildActionIcon(Icons.location_on, () {
+                    debugPrint('Get directions to: ${_selectedBuilding!.displayName}');
+                  }),
+                  const SizedBox(width: 24),
+                  _buildActionIcon(Icons.share, () {
+                    debugPrint('Share: ${_selectedBuilding!.displayName}');
+                  }),
+                  const SizedBox(width: 24),
+                  _buildActionIcon(Icons.notifications, () {
+                    final buildingName = _selectedBuilding!.displayName;
+                    setState(() {
+                      _selectedBuilding = null;
+                      _bubblePosition = null;
+                    });
+                    _showReminderPicker(buildingName);
+                  }),
+                  const SizedBox(width: 24),
+                  _buildActionIcon(Icons.comment, () {
+                    debugPrint('Comment on: ${_selectedBuilding!.displayName}');
+                  }),
+                ],
+              ),
+            ),
 
           // Map Controls - All icon buttons in one aligned column
           Positioned(
@@ -419,7 +549,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
   }
 
-  void _onMapCreated(MapboxMap mapboxMap) {
+  void _onMapCreated(MapboxMap mapboxMap) async {
     _mapboxMap = mapboxMap;
 
     // Set initial camera position
@@ -432,6 +562,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     // Enable live location tracking (blue puck)
     _enableLocationTracking();
+
+    debugPrint('🗺️ SearchPage: Map created, waiting for style to load...');
+
+    // Wait a bit for style to load before adding layers
+    await Future.delayed(const Duration(milliseconds: 500));
 
     // Load map style and add GeoJSON layers
     _setupMap();
@@ -497,7 +632,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       // Add color-coded fill layers for buildings (UOB-style)
       debugPrint('🎨 SearchPage: Adding color-coded building layers...');
 
-      // Academic buildings (Classrooms + Laboratory) - Red
+      // Default - Light tan/beige for ALL buildings (base layer)
+      await _mapboxMap?.style.addLayer(
+        FillLayer(
+          id: "buildings-default-layer",
+          sourceId: "buildings-source",
+          fillColor: const Color(0xFFBCAAA4).value, // Light tan/beige
+          fillOpacity: 0.7,
+        ),
+      );
+
+      // Academic buildings (Classrooms + Laboratory) - Red (rendered on top)
       await _mapboxMap?.style.addLayer(
         FillLayer(
           id: "buildings-academic-layer",
@@ -559,36 +704,46 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ),
       );
 
+      debugPrint('✅ SearchPage: Color-coded building layers added');
+
       // Outline layer
-      await _mapboxMap?.style.addLayer(
-        LineLayer(
-          id: "buildings-outline-layer",
-          sourceId: "buildings-source",
-          lineColor: const Color(0xFF616161).value,
-          lineOpacity: 0.6,
-          lineWidth: 1.0,
-        ),
-      );
+      try {
+        await _mapboxMap?.style.addLayer(
+          LineLayer(
+            id: "buildings-outline-layer",
+            sourceId: "buildings-source",
+            lineColor: const Color(0xFF616161).value,
+            lineOpacity: 0.6,
+            lineWidth: 1.0,
+          ),
+        );
+        debugPrint('✅ SearchPage: Buildings outline layer added');
+      } catch (e) {
+        debugPrint('❌ SearchPage: Failed to add outline layer - $e');
+      }
 
       // Building labels
-      await _mapboxMap?.style.addLayer(
-        SymbolLayer(
-          id: "buildings-labels-layer",
-          sourceId: "buildings-source",
-          textField: "{names}",
-          textSize: 11.0,
-          textColor: const Color(0xFF263238).value,
-          textHaloColor: Colors.white.value,
-          textHaloWidth: 2.0,
-          textHaloBlur: 1.0,
-          textAllowOverlap: false,
-          textOptional: true,
-          textAnchor: TextAnchor.CENTER,
-          minZoom: 15.5,
-        ),
-      );
-
-      debugPrint('✅ SearchPage: Color-coded building layers added');
+      try {
+        await _mapboxMap?.style.addLayer(
+          SymbolLayer(
+            id: "buildings-labels-layer",
+            sourceId: "buildings-source",
+            textField: "{names}",
+            textSize: 11.0,
+            textColor: const Color(0xFF263238).value,
+            textHaloColor: Colors.white.value,
+            textHaloWidth: 2.0,
+            textHaloBlur: 1.0,
+            textAllowOverlap: false,
+            textOptional: true,
+            textAnchor: TextAnchor.CENTER,
+            minZoom: 15.5,
+          ),
+        );
+        debugPrint('✅ SearchPage: Building labels layer added');
+      } catch (e) {
+        debugPrint('❌ SearchPage: Failed to add labels layer - $e');
+      }
 
       // Add line layer for roads
       await _mapboxMap?.style.addLayer(
@@ -673,10 +828,16 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   void _onMapTapped(MapContentGestureContext context) async {
     debugPrint('👆 SearchPage: Map tapped at position ${context.touchPosition}');
-    // Query for buildings at tap location
+    // Query for buildings at tap location - check all building fill layers
     final features = await _mapboxMap?.queryRenderedFeatures(
       RenderedQueryGeometry.fromScreenCoordinate(context.touchPosition),
-      RenderedQueryOptions(layerIds: ["buildings-fill-layer"]),
+      RenderedQueryOptions(layerIds: [
+        "buildings-default-layer",  // Base layer for all buildings
+        "buildings-academic-layer",
+        "buildings-admin-layer",
+        "buildings-library-layer",
+        "buildings-medical-layer",
+      ]),
     );
 
     debugPrint('🔍 SearchPage: Found ${features?.length ?? 0} features at tap location');
@@ -691,25 +852,49 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       final buildingName = properties?['names'] as String? ?? 'Unknown Building';
 
       debugPrint('🏢 SearchPage: Tapped on building: $buildingName');
-      _showBuildingDialog(buildingName);
+
+      // Fly to building and show info card (like Android app)
+      await _onBuildingSelected(buildingName);
     } else {
       debugPrint('ℹ️ SearchPage: No building found at tap location');
+      // Clear selection if tapped on empty area
+      if (_selectedBuilding != null) {
+        setState(() {
+          _selectedBuilding = null;
+          _bubblePosition = null;
+        });
+      }
     }
   }
 
   Future<void> _onBuildingSelected(String buildingName) async {
-    debugPrint('🔎 SearchPage: Building selected from search: $buildingName');
+    debugPrint('🔎 SearchPage: Building selected: $buildingName');
 
-    // Save to recent searches
-    await ref.read(recentSearchesServiceProvider).saveSearch(buildingName);
+    // Extract building code if display name format (e.g., "B11 - Library" -> "B11")
+    final buildingCode = buildingName.contains(' - ')
+        ? buildingName.split(' - ').first
+        : buildingName;
+    debugPrint('📝 SearchPage: Extracted building code: $buildingCode');
 
     final buildings = await ref.read(buildingsProvider.future);
     debugPrint('📋 SearchPage: Total buildings available: ${buildings.length}');
     final building = buildings.firstWhere(
-      (b) => b.name == buildingName,
+      (b) => b.name == buildingCode,
       orElse: () => buildings.first,
     );
     debugPrint('✅ SearchPage: Found building: ${building.name} (${building.buildingFunction})');
+
+    // Use display name for UI (search bar and recent searches)
+    final displayName = building.displayName;
+
+    // Update search bar text with display name (like Android app at line 244)
+    if (_autocompleteController != null) {
+      _autocompleteController!.text = displayName;
+      debugPrint('✏️ SearchPage: Updated search bar text to: $displayName');
+    }
+
+    // Save display name to recent searches
+    await ref.read(recentSearchesServiceProvider).saveSearch(displayName);
 
     // Get centroid and transform to WGS84
     final centroid = building.centroid;
@@ -727,35 +912,90 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       MapAnimationOptions(duration: 1000),
     );
 
-    _showBuildingDialog(buildingName);
+    // Wait for camera animation to complete before showing bubble
+    await Future.delayed(const Duration(milliseconds: 1100));
+
+    _showBuildingOnMap(buildingCode);
   }
 
-  void _showBuildingDialog(String buildingName) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(buildingName),
-        content: Text('Building: $buildingName'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('CLOSE'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Navigate to DirectionsPage with this building as destination
-            },
-            child: const Text('GET DIRECTIONS'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _showReminderPicker(buildingName);
-            },
-            child: const Text('SET REMINDER'),
-          ),
-        ],
+  /// Show building info card on map (like Android app)
+  Future<void> _showBuildingOnMap(String buildingName) async {
+    try {
+      final buildings = await ref.read(buildingsProvider.future);
+      final building = buildings.firstWhere(
+        (b) => b.name == buildingName,
+        orElse: () => buildings.first,
+      );
+
+      if (mounted) {
+        await _updateBubblePosition(building);
+        setState(() {
+          _selectedBuilding = building;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ SearchPage: Error showing building info - $e');
+    }
+  }
+
+  /// Calculate and update bubble position to point at building
+  Future<void> _updateBubblePosition(Building building) async {
+    final centroid = building.centroid;
+    final wgs84 = CoordinateTransformer.utmToWgs84(
+      easting: centroid.x,
+      northing: centroid.y,
+    );
+
+    // Retry getting screen coordinates if map isn't ready yet
+    ScreenCoordinate? screenCoord;
+    int retries = 0;
+    while (screenCoord == null || (screenCoord.x == -1 && screenCoord.y == -1)) {
+      if (retries > 10) {
+        debugPrint('⚠️ SearchPage: Failed to get valid screen coordinates after 10 retries');
+        break;
+      }
+
+      await Future.delayed(Duration(milliseconds: retries == 0 ? 0 : 200));
+      screenCoord = await _mapboxMap?.pixelForCoordinate(
+        Point(coordinates: Position(wgs84.longitude, wgs84.latitude)),
+      );
+
+      if (screenCoord != null && screenCoord.x == -1 && screenCoord.y == -1) {
+        debugPrint('🔄 SearchPage: Got invalid coordinates (-1, -1), retrying... (attempt ${retries + 1})');
+        retries++;
+      }
+    }
+
+    if (screenCoord != null && screenCoord.x != -1 && screenCoord.y != -1 && mounted) {
+      final x = screenCoord.x;
+      final y = screenCoord.y;
+      debugPrint('📍 SearchPage: Building at screen position ($x, $y)');
+      setState(() {
+        // Store the exact screen position where the building center is
+        _bubblePosition = Offset(x, y);
+      });
+      debugPrint('✅ SearchPage: Bubble pointer will point to x=$x');
+    } else {
+      debugPrint('⚠️ SearchPage: Could not get valid screen coordinates for building');
+    }
+  }
+
+
+  Widget _buildActionIcon(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: const BoxDecoration(
+          color: Colors.black,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          color: Colors.white,
+          size: 24,
+        ),
       ),
     );
   }
@@ -774,5 +1014,93 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         );
       }
     });
+  }
+}
+
+/// Custom painter for info box with pointer tab (speech bubble style)
+class _InfoBoxWithPointerPainter extends CustomPainter {
+  final double pointerX;
+
+  const _InfoBoxWithPointerPainter({required this.pointerX});
+
+  @override
+  void paint(Canvas canvas, ui.Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFFF6B6B).withOpacity(0.95)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true; // Smooth edges
+
+    final borderPaint = Paint()
+      ..color = Colors.white.withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..isAntiAlias = true; // Smooth edges
+
+    const pointerWidth = 24.0;
+    const pointerHeight = 14.0;
+    final pointerLeft = pointerX.clamp(pointerWidth / 2, size.width - pointerWidth / 2);
+    const radius = 8.0;
+
+    final path = Path();
+
+    // Start from left side of pointer base
+    path.moveTo(pointerLeft - pointerWidth / 2, pointerHeight);
+
+    // Draw pointer triangle (pointing UP)
+    path.lineTo(pointerLeft, 0); // Tip
+    path.lineTo(pointerLeft + pointerWidth / 2, pointerHeight); // Right base
+
+    // Top right corner
+    path.lineTo(size.width - radius, pointerHeight);
+    path.quadraticBezierTo(
+      size.width, pointerHeight,
+      size.width, pointerHeight + radius,
+    );
+
+    // Right edge
+    path.lineTo(size.width, size.height - radius);
+
+    // Bottom right corner
+    path.quadraticBezierTo(
+      size.width, size.height,
+      size.width - radius, size.height,
+    );
+
+    // Bottom edge
+    path.lineTo(radius, size.height);
+
+    // Bottom left corner
+    path.quadraticBezierTo(
+      0, size.height,
+      0, size.height - radius,
+    );
+
+    // Left edge
+    path.lineTo(0, pointerHeight + radius);
+
+    // Top left corner
+    path.quadraticBezierTo(
+      0, pointerHeight,
+      radius, pointerHeight,
+    );
+
+    // Complete top edge to pointer
+    path.lineTo(pointerLeft - pointerWidth / 2, pointerHeight);
+
+    path.close();
+
+    // Draw shadow
+    canvas.drawShadow(path, Colors.black.withOpacity(0.3), 4.0, false);
+
+    // Draw filled shape
+    canvas.drawPath(path, paint);
+
+    // Draw border
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _InfoBoxWithPointerPainter oldDelegate) {
+    return oldDelegate.pointerX != pointerX;
   }
 }

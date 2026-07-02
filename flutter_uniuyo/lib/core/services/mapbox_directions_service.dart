@@ -7,12 +7,12 @@ import 'package:http/http.dart' as http;
 class MapboxDirectionsService {
   static const String _baseUrl = 'https://api.mapbox.com/directions/v5/mapbox';
 
-  // Access token loaded from environment variable at compile time
-  // Build with: flutter run --dart-define=MAPBOX_ACCESS_TOKEN=your_token_here
-  // Or define in local.properties for Android builds
+  // Mapbox access token - must be provided via dart-define or gradle
+  // For development: flutter run --dart-define=MAPBOX_ACCESS_TOKEN=your_token
+  // For production: set in android/local.properties as MAPBOX_ACCESS_TOKEN
   static const String _accessToken = String.fromEnvironment(
     'MAPBOX_ACCESS_TOKEN',
-    defaultValue: '', // Will be empty if not provided - app will fail gracefully
+    defaultValue: '', // Token must be provided at build time
   );
 
   /// Request a walking route between two points

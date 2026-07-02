@@ -23,7 +23,7 @@ class ReminderService {
           .map((json) => Reminder.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('❌ ReminderService: Failed to load reminders - $e');
+      debugPrint('ReminderService: Failed to load reminders - $e');
       return [];
     }
   }
@@ -49,16 +49,13 @@ class ReminderService {
 
       // Check max limit
       if (reminders.length >= _maxReminders) {
-        debugPrint(
-            '⚠️ ReminderService: Max reminders ($_maxReminders) reached');
         throw Exception('Maximum $_maxReminders reminders allowed');
       }
 
       reminders.add(reminder);
       await _persistReminders(reminders);
-      debugPrint('✅ ReminderService: Saved reminder ${reminder.id}');
     } catch (e) {
-      debugPrint('❌ ReminderService: Failed to save reminder - $e');
+      debugPrint('ReminderService: Failed to save - $e');
       rethrow;
     }
   }
@@ -72,12 +69,9 @@ class ReminderService {
       if (index != -1) {
         reminders[index] = reminder;
         await _persistReminders(reminders);
-        debugPrint('✅ ReminderService: Updated reminder ${reminder.id}');
-      } else {
-        debugPrint('⚠️ ReminderService: Reminder ${reminder.id} not found');
       }
     } catch (e) {
-      debugPrint('❌ ReminderService: Failed to update reminder - $e');
+      debugPrint('ReminderService: Failed to update - $e');
       rethrow;
     }
   }
@@ -91,10 +85,9 @@ class ReminderService {
       if (index != -1) {
         reminders[index] = reminders[index].copyWith(isActive: false);
         await _persistReminders(reminders);
-        debugPrint('🔕 ReminderService: Deleted reminder $reminderId');
       }
     } catch (e) {
-      debugPrint('❌ ReminderService: Failed to delete reminder - $e');
+      debugPrint('ReminderService: Failed to delete - $e');
       rethrow;
     }
   }
@@ -105,9 +98,8 @@ class ReminderService {
       final reminders = await getAllReminders();
       reminders.removeWhere((r) => r.id == reminderId);
       await _persistReminders(reminders);
-      debugPrint('🗑️ ReminderService: Hard deleted reminder $reminderId');
     } catch (e) {
-      debugPrint('❌ ReminderService: Failed to hard delete reminder - $e');
+      debugPrint('ReminderService: Failed to hard delete - $e');
       rethrow;
     }
   }
@@ -131,11 +123,9 @@ class ReminderService {
 
       if (filtered.length != reminders.length) {
         await _persistReminders(filtered);
-        debugPrint(
-            '🧹 ReminderService: Cleaned up ${reminders.length - filtered.length} old reminders');
       }
     } catch (e) {
-      debugPrint('❌ ReminderService: Failed to cleanup reminders - $e');
+      debugPrint('ReminderService: Failed to cleanup - $e');
     }
   }
 
@@ -144,9 +134,8 @@ class ReminderService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_remindersKey);
-      debugPrint('🗑️ ReminderService: Cleared all reminders');
     } catch (e) {
-      debugPrint('❌ ReminderService: Failed to clear reminders - $e');
+      debugPrint('ReminderService: Failed to clear - $e');
       rethrow;
     }
   }
@@ -159,7 +148,7 @@ class ReminderService {
       final jsonString = json.encode(jsonList);
       await prefs.setString(_remindersKey, jsonString);
     } catch (e) {
-      debugPrint('❌ ReminderService: Failed to persist reminders - $e');
+      debugPrint('ReminderService: Failed to persist - $e');
       rethrow;
     }
   }

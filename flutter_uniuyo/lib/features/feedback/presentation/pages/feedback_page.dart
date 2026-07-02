@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// Feedback page that sends feedback to manager's email
+/// Feedback page for collecting user feedback
+/// Feedback is stored locally and can be synced to backend later
 class FeedbackPage extends StatefulWidget {
   const FeedbackPage({super.key});
 
@@ -12,16 +12,12 @@ class FeedbackPage extends StatefulWidget {
 
 class _FeedbackPageState extends State<FeedbackPage> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  static const String managerEmail = 'samchacha67@gmail.com';
 
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -32,55 +28,34 @@ class _FeedbackPageState extends State<FeedbackPage> {
     }
 
     final String name = _nameController.text.trim();
-    final String email = _emailController.text.trim();
     final String message = _messageController.text.trim();
 
-    // Construct email
-    final String subject = Uri.encodeComponent('Campus Navigation App Feedback from $name');
-    final String body = Uri.encodeComponent('''
-Name: $name
-Email: $email
+    // Store feedback locally (for future backend integration)
+    debugPrint('📝 Feedback submitted:');
+    debugPrint('   Name: $name');
+    debugPrint('   Message: $message');
+    debugPrint('   Timestamp: ${DateTime.now()}');
 
-Feedback Message:
-$message
+    // Show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thank you for your feedback! We appreciate your input.'),
+          backgroundColor: AppColors.customGreen,
+          duration: Duration(seconds: 3),
+        ),
+      );
 
----
-Sent from Uniuyo Town Campus Navigation App
-''');
+      // Clear form after success
+      _nameController.clear();
+      _messageController.clear();
 
-    final Uri emailUri = Uri.parse('mailto:$managerEmail?subject=$subject&body=$body');
-
-    try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
-
+      // Navigate back after short delay
+      Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Opening email app...'),
-              backgroundColor: AppColors.customGreen,
-              duration: Duration(seconds: 2),
-            ),
-          );
-
-          // Clear form after success
-          _nameController.clear();
-          _emailController.clear();
-          _messageController.clear();
+          Navigator.of(context).pop();
         }
-      } else {
-        throw 'Could not launch email app';
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      });
     }
   }
 
@@ -159,31 +134,6 @@ Sent from Uniuyo Town Campus Navigation App
               ),
               const SizedBox(height: 16),
 
-              // Email Field
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: 'Your Email',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
               // Message Field
               TextFormField(
                 controller: _messageController,
@@ -232,26 +182,25 @@ Sent from Uniuyo Town Campus Navigation App
                   elevation: 2,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
-              // Contact Info
+              // Privacy Note
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[100]!),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                    Icon(Icons.privacy_tip_outlined, color: Colors.grey[700], size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Feedback will be sent to: $managerEmail',
+                        'Your feedback is anonymous and helps us improve the app',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.blue[900],
+                          color: Colors.grey[700],
                         ),
                       ),
                     ),

@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -29,10 +28,14 @@ class NotificationService {
   }) async {
     if (_initialized) return;
 
-    debugPrint('🔔 NotificationService: Initializing...');
-
-    // Initialize timezones
+    // Initialize timezones with local timezone
     tz.initializeTimeZones();
+    // Set local timezone (important for scheduled notifications)
+    try {
+      tz.setLocalLocation(tz.getLocation('Africa/Lagos')); // Nigeria timezone
+    } catch (e) {
+      debugPrint('NotificationService: Could not set timezone, using UTC');
+    }
 
     // Android initialization
     const androidSettings =
@@ -56,9 +59,7 @@ class NotificationService {
       onDidReceiveNotificationResponse: (response) {
         final payload = response.payload;
         if (payload != null) {
-          debugPrint(
-              '👆 NotificationService: Notification tapped, building: $payload');
-          onNotificationTapped(payload); // Pass buildingId
+          onNotificationTapped(payload); // Pass buildingId for navigation
         }
       },
     );
@@ -67,12 +68,12 @@ class NotificationService {
     await _requestPermissions();
 
     _initialized = true;
-    debugPrint('✅ NotificationService: Initialized');
   }
 
-  /// Request notification permissions (iOS)
+  /// Request notification permissions (iOS + Android)
   Future<bool> _requestPermissions() async {
-    final result = await _notifications
+    // iOS permissions
+    final iosResult = await _notifications
         .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(
@@ -80,37 +81,69 @@ class NotificationService {
           badge: true,
           sound: true,
         );
-    return result ?? true;
+
+    // Android 13+ POST_NOTIFICATIONS permission
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin != null) {
+      // Request POST_NOTIFICATIONS permission (Android 13+)
+      await androidPlugin.requestNotificationsPermission();
+
+      // Request SCHEDULE_EXACT_ALARM permission (Android 14+)
+      // This is CRITICAL for scheduled notifications to work
+      await androidPlugin.requestExactAlarmsPermission();
+
+    }
+
+    return iosResult ?? true;
   }
 
   /// Schedule a reminder notification
   /// Matches Android notification setup from BroadcastAlarm.kt
   Future<void> scheduleReminder(Reminder reminder) async {
     try {
-      debugPrint(
-          '⏰ NotificationService: Scheduling reminder ${reminder.notificationId}');
+
+      // Check if exact alarms are permitted (Android 14+)
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+
+      bool canScheduleExact = true;
+      if (androidPlugin != null) {
+        canScheduleExact = await androidPlugin.canScheduleExactNotifications() ?? false;
+        if (!canScheduleExact) {
+          // Request permission if not granted
+          await androidPlugin.requestExactAlarmsPermission();
+          canScheduleExact = await androidPlugin.canScheduleExactNotifications() ?? false;
+        }
+      }
 
       // Android notification details - matches BroadcastAlarm.kt lines 21-32
-      final androidDetails = AndroidNotificationDetails(
+      const androidDetails = AndroidNotificationDetails(
         _channelId,
         _channelName,
         channelDescription: 'Notifications for building appointments',
-        importance: Importance.high, // IMPORTANCE_HIGH from Android
-        priority: Priority.high,
+        importance: Importance.max, // Maximum importance for sound
+        priority: Priority.max,
         enableVibration: true,
-        vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]), // Matches Android line 30
         playSound: true,
+        // Uses default notification sound
         enableLights: true,
-        ledColor: const Color(0xFF0000FF), // Blue, matches Android line 29
+        ledColor: Color(0xFF0000FF), // Blue, matches Android line 29
         ledOnMs: 1000,
         ledOffMs: 500,
+        fullScreenIntent: true, // Wake screen
       );
 
-      // iOS notification details
+      // iOS notification details - with foreground presentation
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        // Time sensitive ensures notification shows prominently
+        interruptionLevel: InterruptionLevel.timeSensitive,
       );
 
       final details = NotificationDetails(
@@ -129,6 +162,11 @@ class NotificationService {
       final body = reminder.message ??
           'Reminder: ${reminder.buildingDisplayName}'; // More specific than Android
 
+      // Use exact scheduling if permitted, otherwise use inexact (may be delayed)
+      final scheduleMode = canScheduleExact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+
       await _notifications.zonedSchedule(
         reminder.notificationId,
         title,
@@ -136,15 +174,12 @@ class NotificationService {
         scheduledDate,
         details,
         payload: reminder.buildingId, // Pass buildingId for navigation
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
-
-      debugPrint(
-          '✅ NotificationService: Scheduled notification ${reminder.notificationId} for ${reminder.scheduledDateTime}');
     } catch (e) {
-      debugPrint('❌ NotificationService: Failed to schedule notification - $e');
+      debugPrint('NotificationService: Failed to schedule - $e');
       rethrow;
     }
   }
@@ -153,9 +188,8 @@ class NotificationService {
   Future<void> cancelReminder(int notificationId) async {
     try {
       await _notifications.cancel(notificationId);
-      debugPrint('🔕 NotificationService: Cancelled notification $notificationId');
     } catch (e) {
-      debugPrint('❌ NotificationService: Failed to cancel notification - $e');
+      debugPrint('NotificationService: Failed to cancel - $e');
       rethrow;
     }
   }
@@ -164,9 +198,8 @@ class NotificationService {
   Future<void> cancelAllReminders() async {
     try {
       await _notifications.cancelAll();
-      debugPrint('🔕 NotificationService: Cancelled all notifications');
     } catch (e) {
-      debugPrint('❌ NotificationService: Failed to cancel all notifications - $e');
+      debugPrint('NotificationService: Failed to cancel all - $e');
       rethrow;
     }
   }
@@ -176,7 +209,7 @@ class NotificationService {
     return await _notifications.pendingNotificationRequests();
   }
 
-  /// Check if notifications are enabled (for debugging)
+  /// Check if notifications are enabled
   Future<bool?> areNotificationsEnabled() async {
     return await _notifications
         .resolvePlatformSpecificImplementation<

@@ -12,30 +12,62 @@ import '../../../../core/widgets/building_details_sheet.dart';
 import '../../../directions/data/providers/campus_data_providers.dart';
 import '../../../directions/domain/entities/building.dart';
 
-/// Provider for academic buildings (filtered by building function)
+/// Provider for academic buildings (filtered by Category)
 final academicBuildingsProvider = FutureProvider<List<Building>>((ref) async {
   final allBuildings = await ref.watch(buildingsProvider.future);
 
-  // Filter for academic buildings based on building function
-  final academicKeywords = [
+  // Filter ONLY academic buildings based on new Category values
+  // New format: "Academic Unit", "Academic/Adminstrative Unit", etc.
+  // EXCLUDED: Pure admin buildings, hostels, parking, sports, construction
+
+  // Categories to include (academic-related)
+  final academicCategories = [
+    'academic unit',
+    'academic uni',
     'academic',
-    'laboratory',
-    'lecture',
-    'classroom',
-    'faculty',
-    'department',
-    'school',
-    'college',
-    'library',
-    'research',
-    'teaching',
-    'education',
+    // Mixed academic/admin buildings are included as they have academic use
+    'academic/adminstarative unit',
+    'academic/adminstartive unit',
+    'academic/adminstative unit',
+    'academic/adminstration unit',
+    'academic/adminstrative unit',
+    'academiic/adminstrative unit',
   ];
 
-  return allBuildings.where((building) {
-    final function = building.buildingFunction.toLowerCase();
-    return academicKeywords.any((keyword) => function.contains(keyword));
+  // Categories to exclude (non-academic)
+  final excludedCategories = [
+    'adminstrative unit',
+    'adminstrative',
+    'adminstative unit',
+    'adminstravive unit',
+    'hostel',
+    'hostels',
+    'parking lot',
+    'sports facility',
+    'under construction',
+    'under-construction',
+    'other',
+    'others',
+  ];
+
+  final academicBuildings = allBuildings.where((building) {
+    final category = building.buildingFunction.toLowerCase();
+
+    // Check if it's an excluded category
+    if (excludedCategories.any((excluded) => category == excluded)) {
+      return false;
+    }
+
+    // Include if it matches an academic category
+    return academicCategories.any((academic) => category == academic || category.contains('academic'));
   }).toList();
+
+  debugPrint('📚 StudySpace Filter: Found ${academicBuildings.length} academic buildings out of ${allBuildings.length} total');
+  for (final building in academicBuildings.take(10)) {
+    debugPrint('   ✅ ${building.name} - ${building.buildingFunction}');
+  }
+
+  return academicBuildings;
 });
 
 /// Study Space page showing academic buildings highlighted
@@ -697,10 +729,10 @@ class _StudySpacePageState extends ConsumerState<StudySpacePage> {
           geometry['coordinates'] = _transformMultiPolygon(coords);
         }
 
-        // Check if academic building
+        // Check if academic building (support both old 'gid' and new 'OBJECTID')
         final propertiesRaw = feature['properties'];
         final properties = Map<String, dynamic>.from(propertiesRaw as Map);
-        final gid = properties['gid'] as int;
+        final gid = (properties['gid'] ?? properties['OBJECTID'] ?? 0) as int;
 
         if (academicGids.contains(gid)) {
           academicFeatures.add(feature);
@@ -790,7 +822,7 @@ class _StudySpacePageState extends ConsumerState<StudySpacePage> {
         SymbolLayer(
           id: "academic-buildings-labels",
           sourceId: "academic-buildings-source",
-          textField: "{names}",
+          textField: "{Name}",
           textSize: 11.0,
           textColor: const Color(0xFF263238).value,
           textHaloColor: Colors.white.value,
@@ -892,8 +924,8 @@ class _StudySpacePageState extends ConsumerState<StudySpacePage> {
       final properties = propertiesRaw != null
           ? Map<String, dynamic>.from(propertiesRaw as Map)
           : null;
-      final buildingName = properties?['names'] as String? ?? 'Unknown Building';
-      final buildingFunction = properties?['building_function'] as String? ?? 'Unknown';
+      final buildingName = properties?['Name'] as String? ?? 'Unknown Building';
+      final buildingFunction = properties?['Category'] as String? ?? 'Unknown';
 
       debugPrint('🏢 StudySpacePage: Tapped on academic building: $buildingName');
       _showBuildingDialog(buildingName, buildingFunction);

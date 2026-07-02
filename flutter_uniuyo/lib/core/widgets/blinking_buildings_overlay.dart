@@ -83,12 +83,12 @@ class _BlinkingBuildingsOverlayState
           fillOpacity: _opacityAnimation.value,
           filter: <Object>[
             'in',
-            <String>['get', 'names'],
+            <String>['get', 'Name'],
             ...buildingIds,
           ],
         ),
         LayerPosition(
-          above: 'buildings-medical-layer', // Add above all building fill layers
+          above: 'buildings-other-layer', // Add above all building fill layers
           below: 'buildings-labels-layer', // But below labels
         ),
       );

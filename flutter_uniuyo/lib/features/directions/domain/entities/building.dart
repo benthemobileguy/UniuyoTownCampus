@@ -3,7 +3,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'building.freezed.dart';
 part 'building.g.dart';
 
-/// Building entity matching the Buildings111.geojson structure
+/// Building entity supporting both old and new GeoJSON formats
+/// Old format: gid, names, area_m2, building_function
+/// New format: OBJECTID, Name, Category, Shape_Area
 @freezed
 class Building with _$Building {
   const factory Building({
@@ -18,16 +20,24 @@ class Building with _$Building {
       _$BuildingFromJson(json);
 
   /// Create Building from GeoJSON Feature
+  /// Supports both old format (gid/names/area_m2/building_function)
+  /// and new format (OBJECTID/Name/Category/Shape_Area)
   factory Building.fromGeoJsonFeature(Map<String, dynamic> feature) {
     final properties = feature['properties'] as Map<String, dynamic>;
     final geometry = feature['geometry'] as Map<String, dynamic>;
     final coords = geometry['coordinates'] as List<dynamic>;
 
+    // Support both old and new property names
+    final gid = (properties['gid'] ?? properties['OBJECTID'] ?? 0) as int;
+    final name = (properties['names'] ?? properties['Name'] ?? 'Unknown') as String;
+    final areaM2 = ((properties['area_m2'] ?? properties['Shape_Area'] ?? 0.0) as num).toDouble();
+    final buildingFunction = (properties['building_function'] ?? properties['Category'] ?? 'Unknown') as String;
+
     return Building(
-      gid: properties['gid'] as int,
-      name: properties['names'] as String? ?? 'Unknown',
-      areaM2: (properties['area_m2'] as num?)?.toDouble() ?? 0.0,
-      buildingFunction: properties['building_function'] as String? ?? 'Unknown',
+      gid: gid,
+      name: name,
+      areaM2: areaM2,
+      buildingFunction: buildingFunction,
       coordinates: coords
           .map((polygon) => (polygon as List<dynamic>)
               .map((ring) => (ring as List<dynamic>)
@@ -72,9 +82,15 @@ extension BuildingExtension on Building {
         : (x: 0.0, y: 0.0);
   }
 
-  /// Get a user-friendly display name combining code and function
-  /// Example: "B11 - Library" or "A1 - Laboratory"
+  /// Get a user-friendly display name
+  /// For short names (like "A1", "B11"), combines with function: "B11 - Library"
+  /// For descriptive names (like "Central Admin Block"), just shows the name
   String get displayName {
-    return '$name - $buildingFunction';
+    // If name is short (likely a code like "A1", "B11"), append the function
+    if (name.length <= 4 && RegExp(r'^[A-Z]\d+$').hasMatch(name)) {
+      return '$name - $buildingFunction';
+    }
+    // For longer descriptive names, just return the name
+    return name;
   }
 }

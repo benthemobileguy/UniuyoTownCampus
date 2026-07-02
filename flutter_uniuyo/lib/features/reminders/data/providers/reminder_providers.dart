@@ -10,25 +10,20 @@ part 'reminder_providers.g.dart';
 /// Provider for reminder service
 @riverpod
 ReminderService reminderService(ReminderServiceRef ref) {
-  debugPrint('🔧 Provider: Creating ReminderService');
   return ReminderService();
 }
 
 /// Provider for notification service
 @riverpod
 NotificationService notificationService(NotificationServiceRef ref) {
-  debugPrint('🔧 Provider: Creating NotificationService');
   return NotificationService();
 }
 
 /// Provider for all active reminders
 @riverpod
 Future<List<Reminder>> activeReminders(ActiveRemindersRef ref) async {
-  debugPrint('📍 Provider: Fetching active reminders...');
   final service = ref.watch(reminderServiceProvider);
-  final reminders = await service.getActiveReminders();
-  debugPrint('✅ Provider: Fetched ${reminders.length} active reminders');
-  return reminders;
+  return await service.getActiveReminders();
 }
 
 /// Provider for reminders of a specific building
@@ -37,12 +32,8 @@ Future<List<Reminder>> buildingReminders(
   BuildingRemindersRef ref,
   String buildingId,
 ) async {
-  debugPrint('📍 Provider: Fetching reminders for building $buildingId...');
   final service = ref.watch(reminderServiceProvider);
-  final reminders = await service.getRemindersForBuilding(buildingId);
-  debugPrint(
-      '✅ Provider: Fetched ${reminders.length} reminders for $buildingId');
-  return reminders;
+  return await service.getRemindersForBuilding(buildingId);
 }
 
 /// Provider to check if a building has active reminders
@@ -62,10 +53,8 @@ class ReminderManager extends _$ReminderManager {
   @override
   Future<void> build() async {
     // Initialize - cleanup old reminders on app start
-    debugPrint('🔧 ReminderManager: Initializing...');
     final service = ref.read(reminderServiceProvider);
     await service.cleanupPastReminders();
-    debugPrint('✅ ReminderManager: Initialized');
   }
 
   /// Create and schedule a new reminder
@@ -76,9 +65,6 @@ class ReminderManager extends _$ReminderManager {
     String? message,
   }) async {
     try {
-      debugPrint(
-          '📝 ReminderManager: Creating reminder for $buildingDisplayName');
-
       // Generate unique ID and notification ID
       final id = const Uuid().v4();
       // Use timestamp modulo max int for notification ID (must be unique)
@@ -109,10 +95,9 @@ class ReminderManager extends _$ReminderManager {
       ref.invalidate(buildingRemindersProvider(buildingId));
       ref.invalidate(hasBuildingRemindersProvider(buildingId));
 
-      debugPrint('✅ ReminderManager: Created reminder ${reminder.id}');
       return reminder;
     } catch (e) {
-      debugPrint('❌ ReminderManager: Failed to create reminder - $e');
+      debugPrint('ReminderManager: Failed to create reminder - $e');
       return null;
     }
   }
@@ -120,8 +105,6 @@ class ReminderManager extends _$ReminderManager {
   /// Cancel/delete a reminder
   Future<void> cancelReminder(Reminder reminder) async {
     try {
-      debugPrint('🔕 ReminderManager: Cancelling reminder ${reminder.id}');
-
       // Cancel notification
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.cancelReminder(reminder.notificationId);
@@ -134,10 +117,8 @@ class ReminderManager extends _$ReminderManager {
       ref.invalidate(activeRemindersProvider);
       ref.invalidate(buildingRemindersProvider(reminder.buildingId));
       ref.invalidate(hasBuildingRemindersProvider(reminder.buildingId));
-
-      debugPrint('✅ ReminderManager: Cancelled reminder ${reminder.id}');
     } catch (e) {
-      debugPrint('❌ ReminderManager: Failed to cancel reminder - $e');
+      debugPrint('ReminderManager: Failed to cancel reminder - $e');
       rethrow;
     }
   }
@@ -145,8 +126,6 @@ class ReminderManager extends _$ReminderManager {
   /// Update a reminder (reschedule)
   Future<void> updateReminder(Reminder reminder) async {
     try {
-      debugPrint('📝 ReminderManager: Updating reminder ${reminder.id}');
-
       // Cancel old notification
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.cancelReminder(reminder.notificationId);
@@ -161,10 +140,8 @@ class ReminderManager extends _$ReminderManager {
       // Invalidate providers
       ref.invalidate(activeRemindersProvider);
       ref.invalidate(buildingRemindersProvider(reminder.buildingId));
-
-      debugPrint('✅ ReminderManager: Updated reminder ${reminder.id}');
     } catch (e) {
-      debugPrint('❌ ReminderManager: Failed to update reminder - $e');
+      debugPrint('ReminderManager: Failed to update reminder - $e');
       rethrow;
     }
   }

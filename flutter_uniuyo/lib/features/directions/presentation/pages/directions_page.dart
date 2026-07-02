@@ -14,6 +14,7 @@ import '../../../../core/widgets/error_state_widget.dart';
 import '../../../../core/widgets/loading_widget.dart';
 import '../../../../core/widgets/route_summary_card.dart';
 import '../../../../core/widgets/building_details_sheet.dart';
+import '../../../navigation/presentation/pages/navigation_page.dart';
 import '../../data/providers/campus_data_providers.dart';
 import '../../domain/entities/building.dart';
 
@@ -834,21 +835,23 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
 
   IconData _getBuildingIcon(String function) {
     final lowerFunction = function.toLowerCase();
+    // New GeoJSON Category values: Academic Unit, Adminstrative Unit, Hostel, etc.
+    if (lowerFunction.contains('academic') && !lowerFunction.contains('admin')) {
+      return Icons.school; // Academic buildings
+    }
+    if (lowerFunction.contains('admin')) return Icons.business; // Administrative
+    if (lowerFunction.contains('hostel')) return Icons.home; // Hostels
+    if (lowerFunction.contains('sport')) return Icons.sports;
+    if (lowerFunction.contains('parking')) return Icons.local_parking;
+    if (lowerFunction.contains('construction')) return Icons.construction;
+    // Legacy support for old values
     if (lowerFunction.contains('library')) return Icons.local_library;
     if (lowerFunction.contains('laboratory') || lowerFunction.contains('classrooms')) {
       return Icons.science;
     }
-    if (lowerFunction.contains('lecture') || lowerFunction.contains('classroom')) {
-      return Icons.school;
-    }
-    if (lowerFunction.contains('admin')) return Icons.business;
     if (lowerFunction.contains('cafeteria') || lowerFunction.contains('food')) {
       return Icons.restaurant;
     }
-    if (lowerFunction.contains('hostel') || lowerFunction.contains('residential')) {
-      return Icons.home;
-    }
-    if (lowerFunction.contains('sport')) return Icons.sports;
     if (lowerFunction.contains('medical') || lowerFunction.contains('health')) {
       return Icons.local_hospital;
     }
@@ -857,21 +860,23 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
 
   Color _getBuildingColor(String function) {
     final lowerFunction = function.toLowerCase();
+    // New GeoJSON Category values: Academic Unit, Adminstrative Unit, Hostel, etc.
+    if (lowerFunction.contains('academic') && !lowerFunction.contains('admin')) {
+      return const Color(0xFFD32F2F); // Red for academic
+    }
+    if (lowerFunction.contains('admin')) return const Color(0xFFEF6C00); // Orange for admin
+    if (lowerFunction.contains('hostel')) return const Color(0xFF512DA8); // Purple for hostels
+    if (lowerFunction.contains('sport')) return const Color(0xFF0288D1); // Blue for sports
+    if (lowerFunction.contains('parking')) return const Color(0xFF757575); // Gray for parking
+    if (lowerFunction.contains('construction')) return const Color(0xFFFFA000); // Amber for construction
+    // Legacy support for old values
     if (lowerFunction.contains('library')) return const Color(0xFF512DA8);
     if (lowerFunction.contains('laboratory') || lowerFunction.contains('classrooms')) {
       return const Color(0xFFD32F2F);
     }
-    if (lowerFunction.contains('lecture') || lowerFunction.contains('classroom')) {
-      return const Color(0xFFD32F2F);
-    }
-    if (lowerFunction.contains('admin')) return const Color(0xFFEF6C00);
     if (lowerFunction.contains('cafeteria') || lowerFunction.contains('food')) {
       return const Color(0xFFFFA000);
     }
-    if (lowerFunction.contains('hostel') || lowerFunction.contains('residential')) {
-      return const Color(0xFF689F38);
-    }
-    if (lowerFunction.contains('sport')) return const Color(0xFF0288D1);
     if (lowerFunction.contains('medical') || lowerFunction.contains('health')) {
       return const Color(0xFFC2185B);
     }
@@ -1030,19 +1035,25 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
         ),
       );
 
-      // Academic buildings (Classrooms + Laboratory) - Red (rendered on top)
+      // Academic buildings - Red (rendered on top)
       await _mapboxMap?.style.addLayer(
         FillLayer(
           id: "buildings-academic-layer",
           sourceId: "buildings-source",
           fillColor: const Color(0xFFD32F2F).value, // Red like UOB academic
           fillOpacity: 0.75,
-          filter: <Object>[
-            "match",
-            <String>["get", "building_function"],
-            <Object>["Classrooms", "Laboratory"],
-            true,
-            false
+          filter: [
+            "any",
+            ["==", ["get", "Category"], "Academic Unit"],
+            ["==", ["get", "Category"], "Academic unit"],
+            ["==", ["get", "Category"], "Academic Uni"],
+            ["==", ["get", "Category"], "Academic"],
+            ["==", ["get", "Category"], "Academic/Adminstarative Unit"],
+            ["==", ["get", "Category"], "Academic/Adminstartive Unit"],
+            ["==", ["get", "Category"], "Academic/Adminstative Unit"],
+            ["==", ["get", "Category"], "Academic/Adminstration Unit"],
+            ["==", ["get", "Category"], "Academic/Adminstrative Unit"],
+            ["==", ["get", "Category"], "Academiic/Adminstrative Unit"],
           ],
         ),
       );
@@ -1054,40 +1065,45 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
           sourceId: "buildings-source",
           fillColor: const Color(0xFFEF6C00).value, // Orange
           fillOpacity: 0.75,
-          filter: <Object>[
-            "==",
-            <String>["get", "building_function"],
-            "Admin Block"
+          filter: [
+            "any",
+            ["==", ["get", "Category"], "Adminstrative Unit"],
+            ["==", ["get", "Category"], "Adminstrative unit"],
+            ["==", ["get", "Category"], "Adminstrative"],
+            ["==", ["get", "Category"], "Adminstative Unit"],
+            ["==", ["get", "Category"], "Adminstravive Unit"],
           ],
         ),
       );
 
-      // Libraries - Deep Purple
+      // Hostels - Deep Purple
       await _mapboxMap?.style.addLayer(
         FillLayer(
-          id: "buildings-library-layer",
+          id: "buildings-hostel-layer",
           sourceId: "buildings-source",
           fillColor: const Color(0xFF512DA8).value, // Purple
           fillOpacity: 0.75,
-          filter: <Object>[
-            "==",
-            <String>["get", "building_function"],
-            "Library"
+          filter: [
+            "any",
+            ["==", ["get", "Category"], "Hostel"],
+            ["==", ["get", "Category"], "Hostels"],
           ],
         ),
       );
 
-      // Medical/Health - Pink
+      // Sports/Other facilities - Pink
       await _mapboxMap?.style.addLayer(
         FillLayer(
-          id: "buildings-medical-layer",
+          id: "buildings-other-layer",
           sourceId: "buildings-source",
           fillColor: const Color(0xFFC2185B).value, // Pink
           fillOpacity: 0.75,
-          filter: <Object>[
-            "==",
-            <String>["get", "building_function"],
-            "Medical Facilities"
+          filter: [
+            "any",
+            ["==", ["get", "Category"], "Sports facility"],
+            ["==", ["get", "Category"], "Parking lot"],
+            ["==", ["get", "Category"], "Other"],
+            ["==", ["get", "Category"], "Others"],
           ],
         ),
       );
@@ -1110,7 +1126,7 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
         SymbolLayer(
           id: "buildings-labels-layer",
           sourceId: "buildings-source",
-          textField: "{names}", // Building codes like B15, C2, etc.
+          textField: "{Name}", // Building names from new GeoJSON format
           textSize: 11.0,
           textColor: const Color(0xFF263238).value, // Dark blue-gray
           textHaloColor: Colors.white.value,
@@ -1207,8 +1223,8 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
         "buildings-default-layer",
         "buildings-academic-layer",
         "buildings-admin-layer",
-        "buildings-library-layer",
-        "buildings-medical-layer",
+        "buildings-hostel-layer",
+        "buildings-other-layer",
       ]),
     );
 
@@ -1223,7 +1239,7 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
       final properties = propertiesRaw != null
           ? Map<String, dynamic>.from(propertiesRaw as Map)
           : null;
-      final buildingName = properties?['names'] as String? ?? 'Unknown Building';
+      final buildingName = properties?['Name'] as String? ?? 'Unknown Building';
 
       debugPrint('🏢 DirectionsPage: Tapped on building: $buildingName');
       _showBuildingDialog(buildingName);
@@ -1273,10 +1289,10 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
     final buildings = await ref.read(buildingsProvider.future);
     debugPrint('📋 DirectionsPage: Total buildings available: ${buildings.length}');
     _originBuilding = buildings.firstWhere(
-      (b) => b.name == buildingName,
+      (b) => b.displayName == buildingName,
       orElse: () => buildings.first,
     );
-    debugPrint('✅ DirectionsPage: Found origin building: ${_originBuilding!.name}');
+    debugPrint('✅ DirectionsPage: Found origin building: ${_originBuilding!.displayName}');
 
     // Zoom to building
     final centroid = _originBuilding!.centroid;
@@ -1312,10 +1328,10 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
     final buildings = await ref.read(buildingsProvider.future);
     debugPrint('📋 DirectionsPage: Total buildings available: ${buildings.length}');
     _destinationBuilding = buildings.firstWhere(
-      (b) => b.name == buildingName,
+      (b) => b.displayName == buildingName,
       orElse: () => buildings.first,
     );
-    debugPrint('✅ DirectionsPage: Found destination building: ${_destinationBuilding!.name}');
+    debugPrint('✅ DirectionsPage: Found destination building: ${_destinationBuilding!.displayName}');
 
     // Zoom to building
     final centroid = _destinationBuilding!.centroid;
@@ -1603,7 +1619,7 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
   }
 
   void _startNavigation() {
-    if (_currentRoute == null) {
+    if (_currentRoute == null || _originBuilding == null || _destinationBuilding == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select origin and destination first'),
@@ -1613,10 +1629,33 @@ class _DirectionsPageState extends ConsumerState<DirectionsPage> {
       return;
     }
 
-    debugPrint('🧭 DirectionsPage: Starting navigation from ${_originBuilding?.name} to ${_destinationBuilding?.name}');
+    debugPrint('🧭 DirectionsPage: Starting real-time navigation from ${_originBuilding?.name} to ${_destinationBuilding?.name}');
 
-    // Show turn-by-turn instructions dialog
-    _showNavigationInstructions();
+    // Get origin and destination coordinates in WGS84
+    final originCentroid = _originBuilding!.centroid;
+    final originWgs84 = CoordinateTransformer.utmToWgs84(
+      easting: originCentroid.x,
+      northing: originCentroid.y,
+    );
+
+    final destCentroid = _destinationBuilding!.centroid;
+    final destWgs84 = CoordinateTransformer.utmToWgs84(
+      easting: destCentroid.x,
+      northing: destCentroid.y,
+    );
+
+    // Launch full-screen navigation page
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => NavigationPage(
+          route: _currentRoute!,
+          origin: [originWgs84.longitude, originWgs84.latitude],
+          destination: [destWgs84.longitude, destWgs84.latitude],
+          originName: _originBuilding!.displayName,
+          destinationName: _destinationBuilding!.displayName,
+        ),
+      ),
+    );
   }
 
   void _showNavigationInstructions() {

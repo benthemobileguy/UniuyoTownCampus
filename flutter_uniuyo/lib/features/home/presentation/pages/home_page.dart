@@ -8,6 +8,7 @@ import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../../../study_space/presentation/pages/study_space_page.dart';
 import '../../../feedback/presentation/pages/feedback_page.dart';
 import '../../../campus_info/presentation/pages/campus_info_page.dart';
+import '../../../report_issue/presentation/pages/report_issue_page.dart';
 import '../widgets/feature_card_widget.dart';
 
 /// Home page matching MainActivity.kt
@@ -92,13 +93,18 @@ class HomePage extends ConsumerWidget {
                     onTap: () => _navigateToStudySpace(context),
                   ),
                   FeatureCardWidget(
+                    title: 'Report Issue',
+                    iconPath: 'assets/images/feedback.png', // Reuse feedback icon
+                    onTap: () => _navigateToReportIssue(context),
+                  ),
+                  FeatureCardWidget(
                     title: 'Feedback',
-                    iconPath: 'assets/images/feedback.png',
+                    iconPath: 'assets/images/info.png',
                     onTap: () => _navigateToFeedback(context),
                   ),
                   FeatureCardWidget(
                     title: 'Campus Info',
-                    iconPath: 'assets/images/info.png',
+                    iconPath: 'assets/images/study.png', // Reuse study icon
                     onTap: () => _navigateToCampusInfo(context),
                   ),
                 ],
@@ -150,6 +156,18 @@ class HomePage extends ConsumerWidget {
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => const StudySpacePage(),
+        transitionDuration: const Duration(milliseconds: 500),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
+  }
+
+  void _navigateToReportIssue(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const ReportIssuePage(),
         transitionDuration: const Duration(milliseconds: 500),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);

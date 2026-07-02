@@ -175,161 +175,106 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               right: 20,
               // Position bubble just below the building (pointer is 14px tall)
               top: _bubblePosition!.dy + 14, // Exactly at pointer tip height
-              child: Stack(
-                children: [
-                  // Background bubble (no interactive children to avoid semantics issues)
-                  CustomPaint(
-                    painter: _InfoBoxWithPointerPainter(
-                      pointerX: _bubblePosition!.dx - 20, // Adjust for container left margin
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(16, 26, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+              child: CustomPaint(
+                painter: _InfoBoxWithPointerPainter(
+                  pointerX: _bubblePosition!.dx - 20, // Adjust for container left margin
+                ),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 26, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Building name
+                      Text(
+                        _selectedBuilding!.displayName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(1, 1),
+                              blurRadius: 3,
+                              color: Colors.black45,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Action icons row - all inside the bubble
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Text(
-                            _selectedBuilding!.displayName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(1, 1),
-                                  blurRadius: 3,
-                                  color: Colors.black45,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Units, Edge, Point',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Builder(
-                            builder: (context) {
-                              final centroid = _selectedBuilding!.centroid;
+                          _buildBubbleActionIcon(
+                            Icons.directions,
+                            'Directions',
+                            () {
+                              final building = _selectedBuilding!;
+                              final centroid = building.centroid;
                               final wgs84 = CoordinateTransformer.utmToWgs84(
                                 easting: centroid.x,
                                 northing: centroid.y,
                               );
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'easting = ${centroid.x.toStringAsFixed(2)}, northing = ${centroid.y.toStringAsFixed(2)}, altitude = 0.0',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'monospace',
-                                      height: 1.5,
-                                    ),
+
+                              // Navigate to DirectionsPage with building as destination
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DirectionsPage(
+                                    destinationName: building.displayName,
+                                    destinationLat: wgs84.latitude,
+                                    destinationLng: wgs84.longitude,
                                   ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    'latitude = ${wgs84.latitude.toStringAsFixed(7)}, longitude = ${wgs84.longitude.toStringAsFixed(7)}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'monospace',
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               );
                             },
                           ),
-                          const SizedBox(height: 80), // Space for action icons
+                          _buildBubbleActionIcon(
+                            Icons.share,
+                            'Share',
+                            () {
+                              _shareBuilding(_selectedBuilding!);
+                            },
+                          ),
+                          _buildBubbleActionIcon(
+                            Icons.notifications_outlined,
+                            'Reminder',
+                            () {
+                              final buildingId = _selectedBuilding!.name;
+                              final displayName = _selectedBuilding!.displayName;
+
+                              // Show dialog first, then hide bubble when dialog closes
+                              showDialog(
+                                context: context,
+                                builder: (context) => ReminderDialog(
+                                  buildingId: buildingId,
+                                  buildingDisplayName: displayName,
+                                ),
+                              ).then((_) {
+                                // Hide bubble after dialog closes
+                                if (mounted) {
+                                  setState(() {
+                                    _selectedBuilding = null;
+                                    _bubblePosition = null;
+                                  });
+                                }
+                              });
+                            },
+                          ),
+                          _buildBubbleActionIcon(
+                            Icons.comment_outlined,
+                            'Comment',
+                            () {
+                              _showCommentDialog(_selectedBuilding!);
+                            },
+                          ),
                         ],
                       ),
-                    ),
+                    ],
                   ),
-
-                  // Interactive action icons (separate from CustomPaint to avoid semantics issues)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 16,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildBubbleActionIcon(
-                          Icons.directions,
-                          'Directions',
-                          () {
-                            final building = _selectedBuilding!;
-                            final centroid = building.centroid;
-                            final wgs84 = CoordinateTransformer.utmToWgs84(
-                              easting: centroid.x,
-                              northing: centroid.y,
-                            );
-
-                            // Navigate to DirectionsPage with building as destination
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => DirectionsPage(
-                                  destinationName: building.displayName,
-                                  destinationLat: wgs84.latitude,
-                                  destinationLng: wgs84.longitude,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        _buildBubbleActionIcon(
-                          Icons.share,
-                          'Share',
-                          () {
-                            _shareBuilding(_selectedBuilding!);
-                          },
-                        ),
-                        _buildBubbleActionIcon(
-                          Icons.notifications_outlined,
-                          'Reminder',
-                          () {
-                            final buildingId = _selectedBuilding!.name;
-                            final displayName = _selectedBuilding!.displayName;
-
-                            // Show dialog first, then hide bubble when dialog closes
-                            showDialog(
-                              context: context,
-                              builder: (context) => ReminderDialog(
-                                buildingId: buildingId,
-                                buildingDisplayName: displayName,
-                              ),
-                            ).then((_) {
-                              // Hide bubble after dialog closes
-                              if (mounted) {
-                                setState(() {
-                                  _selectedBuilding = null;
-                                  _bubblePosition = null;
-                                });
-                              }
-                            });
-                          },
-                        ),
-                        _buildBubbleActionIcon(
-                          Icons.comment_outlined,
-                          'Comment',
-                          () {
-                            _showCommentDialog(_selectedBuilding!);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
 
@@ -694,19 +639,25 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ),
       );
 
-      // Academic buildings (Classrooms + Laboratory) - Red (rendered on top)
+      // Academic buildings - Red (rendered on top)
       await _mapboxMap?.style.addLayer(
         FillLayer(
           id: "buildings-academic-layer",
           sourceId: "buildings-source",
           fillColor: const Color(0xFFD32F2F).value,
           fillOpacity: 0.75,
-          filter: <Object>[
-            "match",
-            <String>["get", "building_function"],
-            <Object>["Classrooms", "Laboratory"],
-            true,
-            false
+          filter: [
+            "any",
+            ["==", ["get", "Category"], "Academic Unit"],
+            ["==", ["get", "Category"], "Academic unit"],
+            ["==", ["get", "Category"], "Academic Uni"],
+            ["==", ["get", "Category"], "Academic"],
+            ["==", ["get", "Category"], "Academic/Adminstarative Unit"],
+            ["==", ["get", "Category"], "Academic/Adminstartive Unit"],
+            ["==", ["get", "Category"], "Academic/Adminstative Unit"],
+            ["==", ["get", "Category"], "Academic/Adminstration Unit"],
+            ["==", ["get", "Category"], "Academic/Adminstrative Unit"],
+            ["==", ["get", "Category"], "Academiic/Adminstrative Unit"],
           ],
         ),
       );
@@ -718,40 +669,45 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           sourceId: "buildings-source",
           fillColor: const Color(0xFFEF6C00).value,
           fillOpacity: 0.75,
-          filter: <Object>[
-            "==",
-            <String>["get", "building_function"],
-            "Admin Block"
+          filter: [
+            "any",
+            ["==", ["get", "Category"], "Adminstrative Unit"],
+            ["==", ["get", "Category"], "Adminstrative unit"],
+            ["==", ["get", "Category"], "Adminstrative"],
+            ["==", ["get", "Category"], "Adminstative Unit"],
+            ["==", ["get", "Category"], "Adminstravive Unit"],
           ],
         ),
       );
 
-      // Libraries - Deep Purple
+      // Hostels - Deep Purple
       await _mapboxMap?.style.addLayer(
         FillLayer(
-          id: "buildings-library-layer",
+          id: "buildings-hostel-layer",
           sourceId: "buildings-source",
           fillColor: const Color(0xFF512DA8).value,
           fillOpacity: 0.75,
-          filter: <Object>[
-            "==",
-            <String>["get", "building_function"],
-            "Library"
+          filter: [
+            "any",
+            ["==", ["get", "Category"], "Hostel"],
+            ["==", ["get", "Category"], "Hostels"],
           ],
         ),
       );
 
-      // Medical - Pink
+      // Sports/Other facilities - Pink
       await _mapboxMap?.style.addLayer(
         FillLayer(
-          id: "buildings-medical-layer",
+          id: "buildings-other-layer",
           sourceId: "buildings-source",
           fillColor: const Color(0xFFC2185B).value,
           fillOpacity: 0.75,
-          filter: <Object>[
-            "==",
-            <String>["get", "building_function"],
-            "Medical Facilities"
+          filter: [
+            "any",
+            ["==", ["get", "Category"], "Sports facility"],
+            ["==", ["get", "Category"], "Parking lot"],
+            ["==", ["get", "Category"], "Other"],
+            ["==", ["get", "Category"], "Others"],
           ],
         ),
       );
@@ -780,7 +736,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           SymbolLayer(
             id: "buildings-labels-layer",
             sourceId: "buildings-source",
-            textField: "{names}",
+            textField: "{Name}",
             textSize: 11.0,
             textColor: const Color(0xFF263238).value,
             textHaloColor: Colors.white.value,
@@ -887,8 +843,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         "buildings-default-layer",  // Base layer for all buildings
         "buildings-academic-layer",
         "buildings-admin-layer",
-        "buildings-library-layer",
-        "buildings-medical-layer",
+        "buildings-hostel-layer",
+        "buildings-other-layer",
       ]),
     );
 
@@ -901,7 +857,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       final properties = propertiesRaw != null
           ? Map<String, dynamic>.from(propertiesRaw as Map)
           : null;
-      final buildingName = properties?['names'] as String? ?? 'Unknown Building';
+      final buildingName = properties?['Name'] as String? ?? 'Unknown Building';
 
       debugPrint('🏢 SearchPage: Tapped on building: $buildingName');
 

@@ -46,6 +46,11 @@ dependencies:
   # URL launcher for email, phone, web links
   url_launcher: ^6.3.1
 
+  # Real-time navigation
+  geolocator: ^13.0.2          # GPS tracking and location stream
+  flutter_tts: ^4.2.0          # Text-to-speech for voice guidance
+  wakelock_plus: ^1.2.8        # Keep screen on during navigation
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

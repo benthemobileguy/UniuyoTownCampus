@@ -1,68 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../reminders/data/providers/reminder_providers.dart';
+import '../../../reminders/domain/entities/reminder.dart';
+import '../../../search/presentation/pages/search_page.dart';
 
-/// Notification model for campus announcements
-class CampusNotification {
-  final String id;
-  final String title;
-  final String message;
-  final DateTime timestamp;
-  final NotificationType type;
-  final bool isRead;
-
-  CampusNotification({
-    required this.id,
-    required this.title,
-    required this.message,
-    required this.timestamp,
-    required this.type,
-    this.isRead = false,
-  });
-}
-
-enum NotificationType {
-  announcement,
-  event,
-  reminder,
-  alert,
-}
-
-/// Provider for campus notifications (mock data for now)
-final notificationsProvider = Provider<List<CampusNotification>>((ref) {
-  return [
-    CampusNotification(
-      id: '1',
-      title: 'Welcome to Uniuyo Town Campus',
-      message: 'Use the navigation features to find your way around campus. Search for buildings, get directions, and discover study spaces.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      type: NotificationType.announcement,
-    ),
-    CampusNotification(
-      id: '2',
-      title: 'Campus Map Updated',
-      message: 'The campus map has been updated with the latest building information and road layouts.',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      type: NotificationType.announcement,
-    ),
-    CampusNotification(
-      id: '3',
-      title: 'Study Spaces Available',
-      message: 'Check out the Study Space feature to find academic buildings and quiet places to study on campus.',
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
-      type: NotificationType.event,
-    ),
-    CampusNotification(
-      id: '4',
-      title: 'Navigation Tips',
-      message: 'Tap on any building on the map to see its details. Use the "Get Directions" feature to plan your route.',
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      type: NotificationType.announcement,
-    ),
-  ];
-});
-
-/// Notifications page showing campus announcements and reminders
+/// Notifications page showing scheduled building reminders
+/// Matches the native Android app behavior:
+/// - Empty state: "You have no notifications yet" with "Set Notifications" button
+/// - With reminders: List of scheduled notifications with building info
 class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
 
@@ -73,7 +20,7 @@ class NotificationsPage extends ConsumerStatefulWidget {
 class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
-    final notifications = ref.watch(notificationsProvider);
+    final remindersAsync = ref.watch(activeRemindersProvider);
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -82,110 +29,72 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         foregroundColor: AppColors.white,
         title: const Text('Notifications'),
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: _showNotificationSettings,
-            tooltip: 'Notification Settings',
-          ),
-        ],
       ),
-      body: notifications.isEmpty
-          ? _buildEmptyState()
-          : Column(
-              children: [
-                // Stats header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.colorPrimary.withOpacity(0.05),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.grey[300]!,
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.notifications_active,
-                        color: AppColors.colorPrimary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${notifications.length} Notifications',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.colorPrimary,
-                        ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () {
-                          // TODO: Mark all as read
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('All notifications marked as read'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Mark all read',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.customGreen,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Notifications list
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = notifications[index];
-                      return _buildNotificationCard(notification);
-                    },
-                  ),
-                ),
-              ],
-            ),
+      body: remindersAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(),
+        ),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading notifications',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+        data: (reminders) {
+          if (reminders.isEmpty) {
+            return _buildEmptyState();
+          }
+          return _buildRemindersList(reminders);
+        },
+      ),
     );
   }
 
+  /// Empty state matching native Android app exactly
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.notifications_none,
-            size: 80,
-            color: Colors.grey[300],
-          ),
-          const SizedBox(height: 16),
           Text(
-            'No Notifications',
+            'You have no notifications yet',
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+              fontSize: 18,
+              color: Colors.grey[500],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'You\'re all caught up!',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
+          const SizedBox(height: 24),
+          // Card-style button matching native Android app
+          Material(
+            color: Colors.white,
+            elevation: 2,
+            shadowColor: Colors.black26,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              onTap: _navigateToSearch,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!, width: 1),
+                ),
+                child: Text(
+                  'Set Notifications',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.colorPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -193,35 +102,99 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     );
   }
 
-  Widget _buildNotificationCard(CampusNotification notification) {
+  /// List of scheduled reminders
+  Widget _buildRemindersList(List<Reminder> reminders) {
+    // Sort by scheduled time (nearest first)
+    final sortedReminders = List<Reminder>.from(reminders)
+      ..sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
+
+    return Column(
+      children: [
+        // Header with count
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.colorPrimary.withOpacity(0.05),
+            border: Border(
+              bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.notifications_active,
+                color: AppColors.colorPrimary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${sortedReminders.length} Scheduled Reminder${sortedReminders.length == 1 ? '' : 's'}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.colorPrimary,
+                ),
+              ),
+              const Spacer(),
+              if (sortedReminders.length > 1)
+                TextButton(
+                  onPressed: () => _showClearAllDialog(sortedReminders),
+                  child: Text(
+                    'Clear All',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red[400],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // Reminders list
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: sortedReminders.length,
+            itemBuilder: (context, index) {
+              return _buildReminderCard(sortedReminders[index]);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Card for each reminder
+  Widget _buildReminderCard(Reminder reminder) {
+    final now = DateTime.now();
+    final isUpcoming = reminder.scheduledDateTime.isAfter(now);
+    final timeDiff = reminder.scheduledDateTime.difference(now);
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      elevation: notification.isRead ? 0 : 2,
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: notification.isRead ? Colors.grey[200]! : Colors.transparent,
-          width: 1,
-        ),
       ),
       child: InkWell(
-        onTap: () => _showNotificationDetails(notification),
+        onTap: () => _navigateToBuildingOnMap(reminder),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon based on notification type
+              // Building icon
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _getNotificationColor(notification.type).withOpacity(0.1),
+                  color: AppColors.colorPrimary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  _getNotificationIcon(notification.type),
-                  color: _getNotificationColor(notification.type),
+                  Icons.location_on,
+                  color: AppColors.colorPrimary,
                   size: 24,
                 ),
               ),
@@ -232,51 +205,77 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.title,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: notification.isRead
-                                  ? FontWeight.w500
-                                  : FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        if (!notification.isRead)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: AppColors.colorPrimary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                      ],
+                    // Building name
+                    Text(
+                      reminder.buildingDisplayName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      notification.message,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                        height: 1.4,
+
+                    // Message (if any)
+                    if (reminder.message != null && reminder.message!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          reminder.message!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _formatTimestamp(notification.timestamp),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                      ),
+
+                    // Scheduled time
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: isUpcoming ? AppColors.customGreen : Colors.grey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatScheduledTime(reminder.scheduledDateTime),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isUpcoming ? AppColors.customGreen : Colors.grey,
+                            fontWeight: isUpcoming ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                        if (isUpcoming && timeDiff.inHours < 24) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              _formatTimeUntil(timeDiff),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.orange,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
+              ),
+
+              // Delete button
+              IconButton(
+                icon: Icon(Icons.delete_outline, color: Colors.red[300]),
+                onPressed: () => _deleteReminder(reminder),
+                tooltip: 'Delete reminder',
               ),
             ],
           ),
@@ -285,143 +284,167 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     );
   }
 
-  IconData _getNotificationIcon(NotificationType type) {
-    switch (type) {
-      case NotificationType.announcement:
-        return Icons.campaign;
-      case NotificationType.event:
-        return Icons.event;
-      case NotificationType.reminder:
-        return Icons.alarm;
-      case NotificationType.alert:
-        return Icons.warning;
-    }
-  }
-
-  Color _getNotificationColor(NotificationType type) {
-    switch (type) {
-      case NotificationType.announcement:
-        return AppColors.colorPrimary;
-      case NotificationType.event:
-        return AppColors.customGreen;
-      case NotificationType.reminder:
-        return Colors.orange;
-      case NotificationType.alert:
-        return Colors.red;
-    }
-  }
-
-  String _formatTimestamp(DateTime timestamp) {
+  String _formatScheduledTime(DateTime dateTime) {
     final now = DateTime.now();
-    final difference = now.difference(timestamp);
+    final isToday = dateTime.year == now.year &&
+        dateTime.month == now.month &&
+        dateTime.day == now.day;
+    final isTomorrow = dateTime.year == now.year &&
+        dateTime.month == now.month &&
+        dateTime.day == now.day + 1;
 
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
+    final timeFormat = DateFormat('h:mm a');
+    final dateFormat = DateFormat('MMM d, yyyy');
+
+    if (isToday) {
+      return 'Today at ${timeFormat.format(dateTime)}';
+    } else if (isTomorrow) {
+      return 'Tomorrow at ${timeFormat.format(dateTime)}';
     } else {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+      return '${dateFormat.format(dateTime)} at ${timeFormat.format(dateTime)}';
     }
   }
 
-  void _showNotificationDetails(CampusNotification notification) {
+  String _formatTimeUntil(Duration diff) {
+    if (diff.inMinutes < 60) {
+      return 'in ${diff.inMinutes}m';
+    } else if (diff.inHours < 24) {
+      return 'in ${diff.inHours}h';
+    } else {
+      return 'in ${diff.inDays}d';
+    }
+  }
+
+  void _navigateToSearch() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const SearchPage()),
+    );
+  }
+
+  void _navigateToBuildingOnMap(Reminder reminder) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => SearchPage(
+          initialBuildingName: reminder.buildingDisplayName,
+        ),
+      ),
+    );
+  }
+
+  void _deleteReminder(Reminder reminder) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              _getNotificationIcon(notification.type),
-              color: _getNotificationColor(notification.type),
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                notification.title,
-                style: const TextStyle(fontSize: 18),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              notification.message,
-              style: const TextStyle(fontSize: 14, height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _formatTimestamp(notification.timestamp),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
+        title: const Text('Delete Reminder'),
+        content: Text(
+          'Are you sure you want to delete the reminder for "${reminder.buildingDisplayName}"?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('CLOSE'),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performDelete(reminder);
+            },
+            child: Text(
+              'DELETE',
+              style: TextStyle(color: Colors.red[400]),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showNotificationSettings() {
+  void _performDelete(Reminder reminder) async {
+    try {
+      await ref.read(reminderManagerProvider.notifier).cancelReminder(reminder);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reminder for "${reminder.buildingDisplayName}" deleted'),
+            backgroundColor: AppColors.customGreen,
+            action: SnackBarAction(
+              label: 'UNDO',
+              textColor: Colors.white,
+              onPressed: () {
+                // Re-create the reminder
+                ref.read(reminderManagerProvider.notifier).createReminder(
+                  buildingId: reminder.buildingId,
+                  buildingDisplayName: reminder.buildingDisplayName,
+                  scheduledDateTime: reminder.scheduledDateTime,
+                  message: reminder.message,
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete reminder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showClearAllDialog(List<Reminder> reminders) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.settings, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('Notification Settings'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SwitchListTile(
-              title: const Text('Campus Announcements', style: TextStyle(fontSize: 14)),
-              value: true,
-              onChanged: (value) {
-                // TODO: Save preference
-              },
-              activeColor: AppColors.customGreen,
-            ),
-            SwitchListTile(
-              title: const Text('Event Notifications', style: TextStyle(fontSize: 14)),
-              value: true,
-              onChanged: (value) {
-                // TODO: Save preference
-              },
-              activeColor: AppColors.customGreen,
-            ),
-            SwitchListTile(
-              title: const Text('Location Reminders', style: TextStyle(fontSize: 14)),
-              value: true,
-              onChanged: (value) {
-                // TODO: Save preference
-              },
-              activeColor: AppColors.customGreen,
-            ),
-          ],
+        title: const Text('Clear All Reminders'),
+        content: Text(
+          'Are you sure you want to delete all ${reminders.length} reminders?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('CLOSE'),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _clearAllReminders(reminders);
+            },
+            child: Text(
+              'CLEAR ALL',
+              style: TextStyle(color: Colors.red[400]),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  void _clearAllReminders(List<Reminder> reminders) async {
+    try {
+      for (final reminder in reminders) {
+        await ref.read(reminderManagerProvider.notifier).cancelReminder(reminder);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cleared ${reminders.length} reminders'),
+            backgroundColor: AppColors.customGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to clear reminders: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
